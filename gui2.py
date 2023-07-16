@@ -51,10 +51,17 @@ def main(kingdom=Greenbelt):
         unrest_label.grid(row=0, column=4, padx=10)                
         food_label = tk.Label(header_frame,text="Food: " + str(kingdom.resources["food"][0]))
         food_label.grid(row=0, column=5, padx=10)
-        food_capacity_label = tk.Label(header_frame, text = "Food Storage Capacity: " + str(kingdom.resources["food"][1]))
-        food_capacity_label.grid(row=0, column=6, padx=10)
-        food_turn_label = tk.Label(header_frame, text = "Food Per Turn: " + str(kingdom.resources["food"][2]))
+        food_consumption_label = tk.Label(header_frame, text = "Food Consumed/Turn: " + str(kingdom.get_consumption()))
+        food_consumption_label.grid(row=0, column=6, padx=10)
+        food_turn_label = tk.Label(header_frame, text = "Food Gained/Turn: " + str(kingdom.resources["food"][2]))
         food_turn_label.grid(row=0, column=7, padx=10)
+        RP_label = tk.Label(header_frame, text = "RP/Turn: " + str(kingdom.RP[2]) + "d" + str(kingdom.RP[1]))
+        RP_label.grid(row=0, column = 8, padx=10)
+        col = 9
+        for ruin in Ruins:            
+            ruin_label = tk.Label(header_frame, text = ruin.title() + ": " + str(kingdom.ruins[ruin]))
+            ruin_label.grid(row = 0, column = col, padx=10)
+            col += 1
     def increase_level():
         kingdom.increase_level()
         write_kingdom_stats()
