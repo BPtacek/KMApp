@@ -157,9 +157,10 @@ class Kingdom:
         tmp = {}
         for settlement in data["settlements"]:
             readable_settlement = settlement.__dict__
-            for building in readable_settlement["buildings"]:
-                tmp[building.name] = readable_settlement["buildings"][building]
+            for building in readable_settlement.get("buildings"):
+                tmp[building.name] = readable_settlement.get("buildings").get(building)
             readable_settlement["buildings"] = tmp
+            tmp = {}
             kingdom_settlements.append(readable_settlement)
         data["settlements"] = kingdom_settlements
         return data
