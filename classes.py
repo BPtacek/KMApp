@@ -150,6 +150,20 @@ class Kingdom:
         # generate the total food consumption of every settlement in the kingdom
         return sum([i.get_consumption() for i in self.settlements])
 
+    def export_kingdom_data(self):
+        # export kingdom data in JSON format as dictionary
+        data = self.__dict__
+        kingdom_settlements = []
+        tmp = {}
+        for settlement in data["settlements"]:
+            readable_settlement = settlement.__dict__
+            for building in readable_settlement["buildings"]:
+                tmp[building.name] = readable_settlement["buildings"][building]
+            readable_settlement["buildings"] = tmp
+            kingdom_settlements.append(readable_settlement)
+        data["settlements"] = kingdom_settlements
+        return data
+
 
 class Settlement:
     def __init__(self, name, location, level, buildings):

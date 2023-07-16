@@ -4,6 +4,7 @@ Created on Sat Jul 15 20:41:37 2023
 
 @author: dtbla
 """
+import json
 import tkinter as tk
 from tkinter.ttk import Separator
 from PIL import ImageTk, Image
@@ -319,4 +320,13 @@ def main(kingdom=Greenbelt):
             next_turn = tk.Label(w1, text=kingdom.resources[resource][2])
 
     # draw_resource_table()
+    def export_kingdom_as_file(file_name, kingdom=Greenbelt, print_only=False):
+        file_name = file_name if file_name.endswith(".json") else file_name + ".json"
+        kingdom_data = kingdom.export_kingdom_data()
+        if print_only:
+            print(json.dumps(kingdom_data, indent=4))
+            return
+        with open(f"{file_name}", "w") as f:
+            json.dump(kingdom_data, f, indent=4)
+
     w1.mainloop()
