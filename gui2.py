@@ -17,11 +17,23 @@ Noktown = Settlement("Noktown", (1013.2497224277931, 273.0), 2,
 Lizards = Settlement("Isle of the Lizard King", (909.3266739736605, 363.0), 1, {Houses: 1, Mill: 1, Shrine: 1})
 Tatzlford = Settlement("Tatzlford", (883.3459118601273, 228.0), 2,
                        {Houses: 1, TownHall: 1, Inn: 1, Orphanage: 1, Barracks: 1})
-Greenbelt = Kingdom("Greenbelt Republic", [],
+Greenbelt = Kingdom("Greenbelt Republic", [(909.3266739736605, 273.0), (935.3074360871937, 228.0),
+                                           (883.3459118601273, 228.0), (961.2881982007268, 273.0),
+                                           (935.3074360871937, 318.0), (909.3266739736605, 363.0),
+                                           (1013.2497224277931, 273.0), (987.26896031426, 228.0),
+                                           (1039.2304845413264, 228.0), (1065.2112466548595, 273.0),
+                                           (1039.2304845413264, 318.0), (1091.1920087683927, 228.0),
+                                           (1065.2112466548595, 183.0), (1013.2497224277931, 183.0),
+                                           (961.2881982007268, 183.0), (935.3074360871937, 138.0),
+                                           (1039.2304845413264, 138.0), (1013.2497224277931, 93.0),
+                                           (1065.2112466548595, 93.0)],
                     5, 0, {i: 0 for i in Ruins}, [Noktown, Lizards, Tatzlford],
                     {"culture": 14, "economy": 16, "loyalty": 14, "stability": 14},
-                    {i: 0 for i in Kingdom_skills.keys()},
-                    {i: "filled" for i in Advisors.keys()}, {}, [30, 6, 13], {"food": [5, 8, 2]})
+                    {'agriculture': 0,'arts': 1,'boating': 0,'defense': 1,'engineering': 1,'exploration': 0,
+                     'folklore': 0,'industry': 1,'intrigue': 0,'magic': 1,'politics': 1,'scholarship': 0,
+                     'statecraft': 1,'trade': 1,'warfare': 1,'wilderness': 0},
+                    {i: "filled" for i in Advisors.keys()}, {}, [30, 6, 13],
+                    {"food": [5, 8, 2],"lumber":[1,8,2],"stone":[3,8,1],"ore":[8,8,1],"luxuries":[0,0,0]},72)
 
 image1 = Image.open("GridlessMap75.jpeg")
 
@@ -43,57 +55,65 @@ def main(kingdom=Greenbelt):
     menubar.add_cascade(label="File", menu=filemenu)
     w1.config(menu=menubar) 
     
+    header = tk.Label(w1, text=kingdom.name)
+    header.grid(row=0,column=0,columnspan=5000)
+    
     tabControl = ttk.Notebook(w1)
     kingdom_overview = ttk.Frame(tabControl)
-    settlements_tab = ttk.Frame(tabControl)
-    feats_tab = ttk.Frame(tabControl)
+    kingdom_details = ttk.Frame(tabControl)
+    settlements_tab = ttk.Frame(tabControl)    
     tabControl.add(kingdom_overview, text="Kingdom Overview")
-    tabControl.add(settlements_tab, text="Settlements")
-    tabControl.add(feats_tab, text="Kingdom Feats")
-    tabControl.pack(expand=1, fill="both")
+    tabControl.add(kingdom_details, text="Kingdom Details")
+    tabControl.add(settlements_tab, text="Settlements")       
+    tabControl.grid(row=1, column=0, columnspan=5000)    
+    tabs = [kingdom_overview,kingdom_details,settlements_tab]
     
-    header = tk.Label(kingdom_overview, text=kingdom.name + " Kingdom Overview")
-    header.grid(row=0, column=0, pady=2, padx=2, columnspan=5000)
-    header_separator = ttk.Separator(kingdom_overview, orient="horizontal")
-    header_separator.grid(column=0, row=1, columnspan=5000, sticky="ew")
-
-    # the above creates the app header
-    def write_kingdom_stats():
-        header_frame = tk.Frame(kingdom_overview)
-        header_frame.grid(row=2, column=0, columnspan=80)
-        level_frame = tk.Frame(header_frame)
-        level_label = tk.Label(level_frame, text="Level: " + str(kingdom.level))
-        increase_button = tk.Button(level_frame, text="^", command=lambda: increase_level())
-        reduce_button = tk.Button(level_frame, text="v", command=lambda: reduce_level())
-        level_label.grid(row=0, column=0)
-        increase_button.grid(row=0, column=1)
-        reduce_button.grid(row=0, column=2)
-        level_frame.grid(row=0, column=0, padx=10)
-        control_label = tk.Label(header_frame, text="Control DC: " + str(kingdom.control_DC))
-        control_label.grid(row=0, column=1, padx=10)
-        hexes_label = tk.Label(header_frame, text="Claimed Hexes: " + str(len(kingdom.claimed_hexes)))
-        hexes_label.grid(row=0, column=3, padx=10)
-        unrest_label = tk.Label(header_frame, text="Unrest: " + str(kingdom.unrest))
-        unrest_label.grid(row=0, column=4, padx=10)
-        food_label = tk.Label(header_frame, text="Food: " + str(kingdom.resources["food"][0]))
-        food_label.grid(row=0, column=5, padx=10)
-        food_capacity_label = tk.Label(header_frame, text="Food Consumed/Turn: " + str(kingdom.get_consumption()))
-        food_capacity_label.grid(row=0, column=6, padx=10)
-        food_turn_label = tk.Label(header_frame, text="Food Gained/Turn: " + str(kingdom.resources["food"][2]))
-        food_turn_label.grid(row=0, column=7, padx=10)
-
-    def increase_level():
-        kingdom.increase_level()
-        write_kingdom_stats()
-        draw_attribute_table()
-
-    def reduce_level():
-        kingdom.reduce_level()
-        write_kingdom_stats()
-        draw_attribute_table()
-
-    write_kingdom_stats()
-    # the above displays key kingdom stats - level, control DC, and number of claimed hexes
+    attributes = ["loyalty","stability","culture","economy"]
+    attribute_variables = {i:tk.IntVar(w1,value=kingdom.get_attribute(i)) for i in attributes}
+    skill_modifiers = {i:tk.IntVar(w1,value=kingdom.get_modifier(i)) for i in Kingdom_skills.keys()}
+    prof_dict = {0:"Untrained",1:"Trained",2:"Expert",3:"Master",4:"Legendary"}
+    proficiency_variables = {i:tk.StringVar(w1) for i in Kingdom_skills.keys()}
+    ruin_variables = {i:tk.StringVar(w1,value=kingdom.ruins[i]) for i in Ruins}      
+      
+    def write_headline_stats():        
+        for tab in tabs:
+            headline_frame = tk.Frame(tab)
+            headline_frame.grid(column=0, row=1, columnspan=5000,sticky="w")
+            top_separator = ttk.Separator(headline_frame, orient="horizontal")
+            top_separator.grid(column=0, row=0, columnspan=5000, sticky="ew")
+            bottom_separator = ttk.Separator(headline_frame, orient="horizontal")
+            bottom_separator.grid(column=0, row=2, columnspan=5000, sticky="ew")       
+            #############            
+            level_label = tk.Label(headline_frame, text="Level: " + str(kingdom.level))            
+            level_label.grid(row=1, column=0,padx=10)
+            ################            
+            control_label = tk.Label(headline_frame, text="Control DC: " + str(kingdom.control_DC))
+            control_label.grid(row=1, column=1,padx=10)
+            #########################            
+            hexes_label = tk.Label(headline_frame, text="Claimed Hexes: " + str(len(kingdom.claimed_hexes))) 
+            hexes_label.grid(row=1, column=2,padx=10)
+            ########################
+            unrest_label = tk.Label(headline_frame, text="Unrest: " + str(kingdom.unrest))
+            unrest_label.grid(row=1, column=3, padx=10)
+            ############################
+            food_label = tk.Label(headline_frame, text="Food: " + str(kingdom.resources["food"][0]))
+            food_label.grid(row=1, column=4, padx=10)
+            food_capacity_label = tk.Label(headline_frame, text="Food Consumed/Turn: " + str(kingdom.get_consumption()))
+            food_capacity_label.grid(row=1, column=5, padx=10)
+            food_turn_label = tk.Label(headline_frame, text="Food Gained/Turn: " + str(kingdom.resources["food"][2]))
+            food_turn_label.grid(row=1, column=6, padx=10)
+            ##############################
+            resource_dice_label = tk.Label(headline_frame, text = "Base Resource Dice: " + kingdom.get_base_resource_die_string())
+            resource_dice_label.grid(row=1, column=8, padx=10)
+            ##################################
+            ruin_startcol=9
+            for ruin in Ruins:
+                ruin_label = tk.Label(headline_frame,text = ruin.title() + ": " + str(kingdom.ruins[ruin]))
+                ruin_label.grid(row=1, column=ruin_startcol,padx=10)
+                ruin_startcol += 1
+            
+    write_headline_stats()
+    # the above displays the headline kingdom stats - level, control DC, number claimed hexes, unrest, food status, ruins
     
     # the above draws the cells of the skills/attributes table
     hexagon_side_length = 30
@@ -154,12 +174,13 @@ def main(kingdom=Greenbelt):
                 nearest_hex_center = (hex_x, hex_y)
                 nearest_hex_distance = distance
         return (nearest_hex_center[0], nearest_hex_center[1] - hexagon_side_length)
+    
     def right_click_add_hex(event=None):
         # add a hex to kingdom.claimed_hexes on right click and draw a red border around the newly claimed hex
         adjusted_hex_coordinate = identify_hex(event.x, event.y)
         kingdom.add_hex((adjusted_hex_coordinate[0], adjusted_hex_coordinate[1]))
         draw_kingdom_borders()
-        write_kingdom_stats()
+        write_headline_stats()
 
     def middle_click_remove_hex(event=None):
         # remove a claimed hex on middle-click and redraw the world map to remove red border around the lost hex
@@ -169,7 +190,7 @@ def main(kingdom=Greenbelt):
         map_canvas.create_image(0, 0, anchor="nw", image=worldmap)
         draw_hex_grid()
         draw_kingdom_borders()
-        write_kingdom_stats()
+        write_headline_stats()
 
     map_canvas.bind("<Button-3>", right_click_add_hex)
     map_canvas.bind("<Button-2>", middle_click_remove_hex)
@@ -207,91 +228,81 @@ def main(kingdom=Greenbelt):
     map_canvas.grid(row=4, column=0, rowspan=30, columnspan=300)
 
     # the above adds the world map image, draws the hex grid, and controls addition/removal of kingdom hexes
-    def increase_skill(skill, row, column):
-        kingdom.increase_skill(skill)
-        proficiency_value = tk.Label(kingdom_overview, text=kingdom.get_modifier(skill))
-        proficiency_value.grid(row=row, column=column + 1)
 
-    def reduce_skill(skill, row, column):
-        kingdom.reduce_skill(skill)
-        proficiency_value = tk.Label(kingdom_overview, text=kingdom.get_modifier(skill))
-        proficiency_value.grid(row=row, column=column + 1)
-
-    def increase_attribute(attribute, row, column):
-        kingdom.increase_attribute(attribute)
-        attribute_value = tk.Label(kingdom_overview, text=kingdom.attributes[attribute])
-        attribute_value.grid(row=row, column=column, rowspan=4, pady=2)
-        update_skills(attribute, row, column - 4)
-
-    def reduce_attribute(attribute, row, column):
-        kingdom.reduce_attribute(attribute)
-        attribute_value = tk.Label(kingdom_overview, text=kingdom.attributes[attribute])
-        attribute_value.grid(row=row, column=column, rowspan=4, pady=2)
-        update_skills(attribute, row, column - 4)
-
-    def update_skills(attribute, row, col):
+    def update_skill_modifiers():
         for skill in Kingdom_skills.keys():
-            if attribute == Kingdom_skills[skill]:
-                skill_label = tk.Label(kingdom_overview, text=skill.title())
-                proficiency_value = tk.Label(kingdom_overview, text=kingdom.get_modifier(skill))
-                skill_label.grid(row=row, column=col + 8)
-                proficiency_value.grid(row=row, column=col + 9)
-                increase_button = tk.Button(kingdom_overview, text="^",
-                                            command=lambda s=skill, r=row, c=col + 8: increase_skill(s, r, c))
-                increase_button.grid(row=row, column=col + 10)
-                reduce_button = tk.Button(kingdom_overview, text="v",
-                                          command=lambda s=skill, r=row, c=col + 8: reduce_skill(s, r, c))
-                reduce_button.grid(row=row, column=col + 11)
-                row += 1
-
-    # the above functions are used to draw and update the kingdom attributes/skills/advisors table
-    def draw_attribute_table():
-        # draws the table of attributes with the associated advisors and skills
-        table_startrow = 38
-        advisor_startrow = table_startrow
-        table_startcol = 0
-        horizontal_separator1 = ttk.Separator(kingdom_overview, orient="horizontal")
-        horizontal_separator2 = ttk.Separator(kingdom_overview, orient="horizontal")
-        horizontal_separator1.grid(column=table_startcol, row=table_startrow - 3, columnspan=66, sticky="ew")
-        horizontal_separator2.grid(column=table_startcol, row=table_startrow - 1, columnspan=66, sticky="ew")
-        for attribute in ["loyalty", "stability", "culture", "economy"]:
-            advisor_header = tk.Label(kingdom_overview, text="Advisors")
-            advisor_header.grid(column=table_startcol, row=table_startrow - 2, columnspan=2)
-            attribute_header = tk.Label(kingdom_overview, text="Attribute")
-            attribute_header.grid(column=table_startcol + 3, row=table_startrow - 2, columnspan=3)
-            skill_header = tk.Label(kingdom_overview, text="Skill")
-            skill_header.grid(column=table_startcol + 7, row=table_startrow - 2, columnspan=3)
-            attribute_label = tk.Label(kingdom_overview, text=attribute.title())
-            attribute_label.grid(row=table_startrow, column=table_startcol + 3, rowspan=4)
-            attribute_value = tk.Label(kingdom_overview, text=str(kingdom.attributes[attribute]))
-            attribute_value.grid(row=table_startrow, column=table_startcol + 4, rowspan=4)
-            increase_button = tk.Button(kingdom_overview, text="^", command=lambda a=attribute, r=table_startrow,
-                                                                     c=table_startcol + 4: increase_attribute(a, r, c))
-            increase_button.grid(row=table_startrow, column=table_startcol + 5, rowspan=4)
-            reduce_button = tk.Button(kingdom_overview, text="v", command=lambda a=attribute, r=table_startrow,
-                                                                   c=table_startcol + 4: reduce_attribute(a, r, c))
-            reduce_button.grid(row=table_startrow, column=table_startcol + 6, rowspan=4)
-            vsep2 = ttk.Separator(kingdom_overview, orient="vertical")
-            vsep2.grid(column=table_startcol + 7, row=table_startrow - 2, rowspan=6, sticky="ns")
+            skill_modifiers[skill].set(kingdom.get_modifier(skill))
+        
+    def update_attributes():
+        for attribute in attributes:
+            attribute_variables[attribute].set(kingdom.get_attribute(attribute))
+        update_skill_modifiers()
+        
+    def increase_skill(skill):
+        kingdom.increase_skill(skill)
+        skill_modifiers[skill].set(kingdom.get_modifier(skill))
+        update_proficiencies()
+    
+    def reduce_skill(skill):
+        kingdom.reduce_skill(skill)
+        skill_modifiers[skill].set(kingdom.get_modifier(skill))
+        update_proficiencies()
+        
+    def increase_attribute(attribute):
+        kingdom.increase_attribute(attribute)
+        update_attributes()
+    
+    def reduce_attribute(attribute):
+        kingdom.reduce_attribute(attribute)
+        update_attributes()    
+    
+    def update_proficiencies():        
+        for skill in Kingdom_skills.keys():
+            prof = kingdom.skills[skill]
+            str = prof_dict[prof]
+            proficiency_variables[skill].set(str)    
+    
+    def draw_attribute_overview():
+        attribute_table_startrow=38
+        attribute_table_startcol = 0
+        for attribute in attributes:
+            attribute_frame = tk.Frame(kingdom_overview,borderwidth=1,relief="groove")
+            attribute_header = tk.Frame(attribute_frame)
+            attribute_frame.grid(row = attribute_table_startrow, column = attribute_table_startcol)
+            attribute_header.grid(row=0,column=0,columnspan=4)
+            header_label = tk.Label(attribute_header, text = attribute.title() + ": ")
+            header_value = tk.Label(attribute_header, textvariable=attribute_variables[attribute])
+            header_label.grid(row=0,column=0,sticky="e")
+            header_value.grid(row=0,column=1,sticky="w")        
+            advisors_label = tk.Label(attribute_frame, text="Leaders")
+            advisors_label.grid(row=2, column=0,columnspan=2)
+            skills_label = tk.Label(attribute_frame, text = "Skill Modifiers")
+            skills_label.grid(row=2, column=3,columnspan=2)
+            advisor_row = 4
             for advisor in Advisors.keys():
                 if Advisors[advisor] == attribute:
-                    advisor_label = tk.Label(kingdom_overview, text=advisor.title())
-                    advisor_label.grid(row=advisor_startrow, rowspan=2, column=table_startcol)
-                    advisor_status = tk.Label(kingdom_overview, text="Appointed")
-                    advisor_status.grid(row=advisor_startrow, rowspan=2, column=table_startcol + 1)
-                    vsep1 = ttk.Separator(kingdom_overview, orient="vertical")
-                    vsep1.grid(column=table_startcol + 2, row=table_startrow - 2, rowspan=6, sticky="ns")
-                    advisor_startrow += 2
-            update_skills(attribute, table_startrow, table_startcol)
-            vertical_separator1 = ttk.Separator(kingdom_overview, orient="vertical")
-            vertical_separator1.grid(column=table_startcol + 15, row=table_startrow - 2, rowspan=6, sticky="nsew")
-            vertical_separator2 = ttk.Separator(kingdom_overview, orient="vertical")
-            vertical_separator2.grid(column=table_startcol + 16, row=table_startrow - 2, rowspan=6, sticky="nsew")
-            table_startcol += 17
-            advisor_startrow = table_startrow
-    # the above creates the attributes/skills/advisors table
-    draw_attribute_table()  # finally we draw the table!
-    #
+                    advisor_label = tk.Label(attribute_frame, text=advisor.title() + ": ")
+                    advisor_label.grid(row = advisor_row, column=0, rowspan=2,sticky="ns")
+                    advisor_status = tk.Label(attribute_frame, text="Assigned")
+                    advisor_status.grid(row=advisor_row, column=1, rowspan=2,sticky="ns")
+                    advisor_row += 2
+            skill_row = 4
+            for skill in Kingdom_skills.keys():
+                if Kingdom_skills[skill] == attribute:
+                    skill_label = tk.Label(attribute_frame, text = skill.title() + ": ")
+                    skill_value = tk.Label(attribute_frame, textvariable=skill_modifiers[skill])
+                    skill_label.grid(row=skill_row, column=3)
+                    skill_value.grid(row=skill_row,column=4)
+                    skill_row += 1
+            for row in [1,3]:
+                hsep = ttk.Separator(attribute_frame, orient="horizontal")
+                hsep.grid(row=row, column=0, columnspan=5, sticky="ew")
+            vsep = ttk.Separator(attribute_frame, orient="vertical")
+            vsep.grid(row=1, column=2, rowspan=10, sticky="ns")
+            attribute_table_startcol += 1
+    
+    draw_attribute_overview()
+                
     def export_kingdom_as_file(file_name, kingdom=Greenbelt, print_only=False):
         file_name = file_name if file_name.endswith(".json") else file_name + ".json"
         kingdom_data = kingdom.export_kingdom_data()
@@ -299,6 +310,217 @@ def main(kingdom=Greenbelt):
             print(json.dumps(kingdom_data, indent=4))
             return
         with open(f"{file_name}", "w") as f:
-            json.dump(kingdom_data, f, indent=4)
+            json.dump(kingdom_data, f, indent=4)   
+     
+    
+    def draw_attribute_details():
+        # draw the detailed attributes/skills/leaders table in the Kingdom Details tab
+        attribute_table_frame = tk.Frame(kingdom_details,borderwidth=1,relief="groove")
+        attribute_table_header = tk.Label(attribute_table_frame,
+                                          text="Kingdom Attributes, Skills, & Leaders",font=("Segoe UI",10,"bold"))
+        attribute_table_header.grid(row=0,column=0)
+        attribute_table_frame.grid(row=5, column=0, rowspan=100,padx=10)   
+        attribute_table_startrow=6
+        attribute_table_startcol = 0
+        update_proficiencies()
+        for attribute in attributes:
+            attribute_frame = tk.Frame(attribute_table_frame,borderwidth=1,relief="groove")
+            attribute_header = tk.Frame(attribute_frame)
+            attribute_frame.grid(row = attribute_table_startrow, column = attribute_table_startcol, sticky="nsew")
+            attribute_header.grid(row=0,column=0,columnspan=8)
+            header_label = tk.Label(attribute_header, text = attribute.title() + ": ")
+            header_value = tk.Label(attribute_header, textvariable=attribute_variables[attribute])
+            attribute_up_button = tk.Button(attribute_header, text="^",
+                                            command = lambda a=attribute: increase_attribute(a))
+            attribute_down_button = tk.Button(attribute_header, text="v",
+                                            command = lambda a=attribute: reduce_attribute(a))            
+            header_label.grid(row=0,column=0,sticky="e")
+            header_value.grid(row=0,column=1,sticky="w")        
+            attribute_up_button.grid(row=0, column=2)
+            attribute_down_button.grid(row=0, column=3)
+            advisors_label = tk.Label(attribute_frame, text="Leaders")
+            advisors_label.grid(row=2, column=0,columnspan=2)
+            skills_label1 = tk.Label(attribute_frame, text = "Skill")
+            skills_label1.grid(row=2, column=3)
+            skills_label2 = tk.Label(attribute_frame, text = "Proficiency")
+            skills_label2.grid(row=2, column=4)
+            skills_label3 = tk.Label(attribute_frame, text = "Modifier")
+            skills_label3.grid(row=2, column=5)
+            advisor_row = 4
+            for advisor in Advisors.keys():                
+                if Advisors[advisor] == attribute:
+                    advisor_label = tk.Label(attribute_frame, text=advisor.title() + ": ", width=8)
+                    advisor_label.grid(row = advisor_row, column=0, rowspan=2,sticky="ew")
+                    advisor_status = tk.Label(attribute_frame, text="Assigned",width=8)
+                    advisor_status.grid(row=advisor_row, column=1, rowspan=2,sticky="ew")
+                    advisor_row += 2
+            skill_row = 4
+            for skill in Kingdom_skills.keys():                
+                if Kingdom_skills[skill] == attribute:
+                    skill_label = tk.Label(attribute_frame, text = skill.title() + ": ")
+                    skill_value = tk.Label(attribute_frame, textvariable=skill_modifiers[skill])
+                    skill_up_button = tk.Button(attribute_frame, text="^",
+                                                command = lambda s=skill: increase_skill(s))
+                    skill_down_button = tk.Button(attribute_frame, text="v",
+                                                command = lambda s=skill: reduce_skill(s))   
+                    skill_label.grid(row=skill_row, column=3)
+                    proficiency_label = tk.Label(attribute_frame, textvariable=proficiency_variables[skill])
+                    proficiency_label.grid(row=skill_row, column=4)
+                    skill_value.grid(row=skill_row,column=5)
+                    skill_up_button.grid(row=skill_row, column=6)
+                    skill_down_button.grid(row=skill_row, column=7)
+                    skill_row += 1
+            for row in [1,3]:
+                hsep = ttk.Separator(attribute_frame, orient="horizontal")
+                hsep.grid(row=row, column=0, columnspan=20, sticky="ew")
+            vsep = ttk.Separator(attribute_frame, orient="vertical")
+            vsep.grid(row=1, column=2, rowspan=10, sticky="ns")
+            attribute_table_startrow += 15          
 
+    draw_attribute_details()
+        
+    def draw_level_table():
+        # draw the level/XP/XP gain table in the Kingdom Details tab
+        level_table_frame = tk.Frame(kingdom_details, borderwidth=1,relief="groove")
+        level_table_frame.grid(row=5, column=2,padx=10,sticky="n")
+        header_frame = tk.Frame(level_table_frame)
+        header_frame.grid(row=0, column = 0, columnspan=50)
+        header = tk.Label(header_frame,text="Kingdom Level and XP",font=("Segoe UI",10,"bold"))
+        header.grid(row=0, column=0, columnspan=50,padx=5)
+        level_frame = tk.Frame(level_table_frame)
+        level_frame.grid(row=1, column = 0, columnspan=50,sticky="w",padx=5)
+        level_label = tk.Label(level_frame, text = "Kingdom Level: " + str(kingdom.level))
+        level_label.grid(row=0, column=0,sticky="w")
+        def increase_level():
+            kingdom.increase_level()
+            update_skill_modifiers()
+            write_headline_stats()
+            draw_level_table()
+        def reduce_level():
+            kingdom.reduce_level()
+            update_skill_modifiers()
+            write_headline_stats()
+            draw_level_table()
+        level_up_button = tk.Button(level_frame, text="^",
+                                    command = lambda: increase_level())
+        level_down_button = tk.Button(level_frame, text="v",
+                                      command = lambda: reduce_level())
+        level_up_button.grid(row=0, column=1)
+        level_down_button.grid(row=0, column=2)
+        xp_frame = tk.Frame(level_table_frame)
+        xp_label = tk.Label(xp_frame, text = "Kingdom XP: " + str(kingdom.xp) + "/1000")
+        increase_xp = tk.Label(xp_frame, text = "Increase XP by:")
+        add_xp = tk.StringVar(xp_frame, value="0")
+        xp_entry = tk.Entry(xp_frame,width=6,textvariable=add_xp)
+        def xp_listener(event=None): # both this and kingdom.increase(xp) need lots of input sanitization!
+            xp_to_add = xp_entry.get()
+            kingdom.increase_xp(xp_to_add)
+            update_skill_modifiers()
+            write_headline_stats()
+            draw_level_table()
+        xp_entry.bind("<Return>",xp_listener)
+        xp_label.grid(row=0, column=0,padx=5)        
+        increase_xp.grid(row=0, column=1)
+        xp_entry.grid(row=0, column=2)
+        xp_frame.grid(row=2,column=0)        
+    
+    draw_level_table()
+    
+    def draw_resource_table():
+        # draw the resources table in the Kingdom Details tab
+        resource_table_frame = tk.Frame(kingdom_details, borderwidth=1,relief="groove")
+        resource_table_frame.grid(row=6, column=2,sticky="n")
+        header_frame = tk.Frame(resource_table_frame)
+        header_frame.grid(row=0, column = 0, columnspan=50)
+        header = tk.Label(header_frame,text="Kingdom Resources",font=("Segoe UI",10,"bold"))
+        header.grid(row=0, column=0, columnspan=50,padx=5)
+        resource_frame = tk.Frame(resource_table_frame)
+        resource_frame.grid(row=1, column=0)
+        resource_name = tk.Label(resource_frame,text="Resource")
+        resource_name.grid(row=0,column=0,padx=2)
+        resource_value = tk.Label(resource_frame,text="Stored Amount")
+        resource_value.grid(row=0,column=1,padx=2)
+        capacity_label = tk.Label(resource_frame,text="Storage Capacity")
+        capacity_label.grid(row=0,column=2,padx=2)
+        gain_label = tk.Label(resource_frame,text="Gain Per Turn")
+        gain_label.grid(row=0,column=3,padx=2)
+        resource_startrow=1
+        for resource in kingdom.resources.keys():
+            name = tk.Label(resource_frame,text=resource.title())       
+            name.grid(row=resource_startrow, column=0)
+            current = tk.Label(resource_frame, text=str(kingdom.resources[resource][0]))
+            current.grid(row=resource_startrow, column=1)
+            capacity = tk.Label(resource_frame, text=str(kingdom.resources[resource][1]))
+            capacity.grid(row=resource_startrow,column=2)
+            gain = tk.Label(resource_frame,text=str(kingdom.resources[resource][2]))
+            gain.grid(row=resource_startrow,column=3)
+            resource_startrow += 1
+    
+    draw_resource_table()
+    
+    def draw_unrest_table():
+        # draw the unrest table in the Kingdom Details tab
+        unrest_frame = tk.Frame(kingdom_details,borderwidth=1,relief="groove")
+        unrest_frame.grid(row=7,column=2,sticky="n")
+        header_frame = tk.Frame(unrest_frame)
+        header_frame.grid(row=0, column = 0, columnspan=50)
+        header = tk.Label(header_frame,text="Unrest",font=("Segoe UI",10,"bold"))
+        header.grid(row=0, column=0, columnspan=50,padx=5)
+        main_frame = tk.Frame(unrest_frame)
+        main_frame.grid(row=1,column=0)
+        unrest_label = tk.Label(main_frame,text="Unrest: " + str(kingdom.unrest))
+        def unrest_penalty():
+            penalties = {0:0,1:1,5:2,10:3,15:4}
+            return -1*max([penalties[i] for i in penalties.keys() if kingdom.unrest >= i])
+        unrest_penalty = tk.Label(main_frame, text="Unrest Penalty: " + str(unrest_penalty()))
+        unrest_label.grid(row=0,column=0)
+        unrest_penalty.grid(row=1,column=0)
+        change_unrest = tk.Label(main_frame,text="Increase/reduce unrest by:")
+        change_unrest.grid(row=3,column=0)
+        unrest_change = tk.StringVar(main_frame,value="0")
+        unrest_entry = tk.Entry(main_frame,width=6,textvariable=unrest_change)
+        unrest_entry.grid(row=3,column=1)
+        def unrest_listener(event=None): # both this and kingdom.increase(xp) need lots of input sanitization!
+            change = unrest_entry.get()
+            kingdom.change_unrest(change)
+            write_headline_stats()
+            draw_unrest_table()
+        unrest_entry.bind("<Return>",unrest_listener)
+        
+    draw_unrest_table()
+    
+    def draw_ruins_table():
+        # draw the ruins table in the Kingdom Details tab
+        ruins_frame = tk.Frame(kingdom_details,borderwidth=1,relief="groove")
+        ruins_frame.grid(row=8,column=2,sticky="n")
+        header_frame = tk.Frame(ruins_frame)
+        header_frame.grid(row=0,column=0,columnspan=50)
+        header = tk.Label(header_frame,text="Ruins",font=("Segoe UI",10,"bold"))
+        header.grid(row=0,column=0)
+        main_frame = tk.Frame(ruins_frame)
+        main_frame.grid(row=1,column=1,columnspan=50)
+        name_label = tk.Label(main_frame,text="Ruin")
+        value_label = tk.Label(main_frame,text="Value")
+        threshold_label = tk.Label(main_frame,text="Threshold")
+        penalty_label = tk.Label(main_frame,text="Penalty")
+        name_label.grid(row=0,column=0)
+        value_label.grid(row=0,column=1)
+        threshold_label.grid(row=0,column=2)
+        penalty_label.grid(row=0,column=3)
+        startrow=1
+        for ruin in Ruins:
+            name = tk.Label(main_frame,text=ruin.title())
+            name.grid(row=startrow,column=0)
+            value = tk.Label(main_frame,text=str(kingdom.ruins[ruin]))
+            value.grid(row=startrow,column=1)
+            threshold = tk.Label(main_frame,text="10")
+            threshold.grid(row=startrow,column=2)
+            penalty = tk.Label(main_frame,text="0")
+            penalty.grid(row=startrow,column=3)
+            startrow += 1
+            
+        
+    
+    draw_ruins_table()
+    
     w1.mainloop()

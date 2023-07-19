@@ -10,7 +10,7 @@ from constants import *
 
 class Kingdom:
     def __init__(self, name, claimed_hexes, level, unrest, ruins, settlements, attributes, skills, advisors, relations,
-                 RP, resources):
+                 RP, resources,xp):
         self.name = name  # String, Kingdom name
         self.claimed_hexes = claimed_hexes  # List of tuples (x,y) specifying coordinates of claimed hexes
         self.level = level  # Int, kingdom level
@@ -25,9 +25,15 @@ class Kingdom:
         self.RP = RP  # List [Int, Int, Int] - current RP, size of resource die, number to roll next turn
         self.resources = resources  # Dict {"resource name":[stored amount, storage capacity, gain next turn]}
         # resources are Food, Lumber, Stone, Ore, and Luxuries
+        self.xp = xp # Int, current XP
 
     def update_control_DC(self):
         self.control_DC = control_DC_table[self.level] + self.get_size()
+        
+    def get_base_resource_die_string(self):
+        if len(self.claimed_hexes) < 1: die_size = 0
+        else: die_size = max([j["rd size"] for (i, j) in size_thresholds.items() if i < len(self.claimed_hexes)])
+        return str(self.level + 4) + "d" + str(die_size)
 
     def increase_level(self):
         if self.level < 20:
@@ -92,6 +98,8 @@ class Kingdom:
                 self.ruins[ruin.lower()] += change
 
     def change_unrest(self, change):
+        try: change = int(change)
+        except: return "Value submitted to kingdom.change_unrest() could not be converted to an integer"
         if self.unrest + change < 0:
             self.unrest = 0
         else:
@@ -114,9 +122,9 @@ class Kingdom:
     def get_size(self):
         num_hexes = len(self.claimed_hexes)
         if num_hexes == 0:
-            return 0
+            return 0        
         else:
-            return max([j for (i, j) in size_thresholds.items() if i < num_hexes])
+            return max([j["dc modifier"] for (i, j) in size_thresholds.items() if i < num_hexes])
 
     def get_modifier(self, skill):
         # String -> Int, get the modifier (attribute + proficiency + building item + ruler circumstance) for the named skill
@@ -128,7 +136,7 @@ class Kingdom:
         level_multiplier = self.level * (self.get_skill(skill) != 0)  # Int * Bool
         proficiency_bonus = 2 * self.get_skill(skill)
         attribute_bonus = (self.get_attribute(Kingdom_skills[skill]) - 10) // 2
-        leadership_bonus = leadership_bonus_size * relevant_role_filled  # Int * Bool
+        leadership_bonus = leadership_bonus_size * relevant_role_filled  # Int * Bool        
         return level_multiplier + proficiency_bonus + attribute_bonus + leadership_bonus
 
     def skill_check(self, skill):
@@ -150,6 +158,14 @@ class Kingdom:
         # generate the total food consumption of every settlement in the kingdom
         return sum([i.get_consumption() for i in self.settlements])
 
+    def increase_xp(self,xp):
+        try: xp = int(xp)
+        except: print("Value entered into XP box was not an integer. Integers only tyvm!")
+        if xp + self.xp > 1000:
+            self.xp = self.xp + xp - 1000
+            self.increase_level()
+        else: self.xp += xp        
+
     def export_kingdom_data(self):
         # export kingdom data in JSON format as dictionary
         data = self.__dict__
@@ -164,8 +180,8 @@ class Kingdom:
                 tmp = {}
             kingdom_settlements.append(readable_settlement)
         data["settlements"] = kingdom_settlements
-        return data
-
+        return data 
+    
 
 class Settlement:
     def __init__(self, name, location, level, buildings):
