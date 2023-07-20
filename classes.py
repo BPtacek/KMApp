@@ -188,7 +188,7 @@ class Settlement:
         self.name = name  # String, settlement name
         self.location = location  # tuple (Int, Int) of grid coordinates specifying settlement's location
         self.level = level  # Int, settlement level
-        self.buildings = buildings  # dictionary of Building objects representing buildings in the settlement and their quantities
+        self.buildings = buildings  # dictionary {Building:Int} of Building objects and number in settlement
         self.occupied_lots = sum(buildings[i] * i.lots for i in buildings)  # Int, number of lots occupied
         self.occupied_blocks = (self.occupied_lots // 4) + (self.occupied_lots % 4 > 0)  # number of blocks occupied
 

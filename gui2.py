@@ -12,31 +12,7 @@ from math import cos, sin, sqrt, radians
 
 from buildings import *
 
-Noktown = Settlement("Noktown", (1013.2497224277931, 273.0), 2,
-                     {Houses: 2, GeneralStore: 1, TownHall: 1, AlchemyLab: 1, Mill: 1, PopularTavern: 1, WoodenWall: 1})
-Lizards = Settlement("Isle of the Lizard King", (909.3266739736605, 363.0), 1, {Houses: 1, Mill: 1, Shrine: 1})
-Tatzlford = Settlement("Tatzlford", (883.3459118601273, 228.0), 2,
-                       {Houses: 1, TownHall: 1, Inn: 1, Orphanage: 1, Barracks: 1})
-Greenbelt = Kingdom("Greenbelt Republic", [(909.3266739736605, 273.0), (935.3074360871937, 228.0),
-                                           (883.3459118601273, 228.0), (961.2881982007268, 273.0),
-                                           (935.3074360871937, 318.0), (909.3266739736605, 363.0),
-                                           (1013.2497224277931, 273.0), (987.26896031426, 228.0),
-                                           (1039.2304845413264, 228.0), (1065.2112466548595, 273.0),
-                                           (1039.2304845413264, 318.0), (1091.1920087683927, 228.0),
-                                           (1065.2112466548595, 183.0), (1013.2497224277931, 183.0),
-                                           (961.2881982007268, 183.0), (935.3074360871937, 138.0),
-                                           (1039.2304845413264, 138.0), (1013.2497224277931, 93.0),
-                                           (1065.2112466548595, 93.0)],
-                    5, 0, {i: 0 for i in Ruins}, [Noktown, Lizards, Tatzlford],
-                    {"culture": 14, "economy": 16, "loyalty": 14, "stability": 14},
-                    {'agriculture': 0,'arts': 1,'boating': 0,'defense': 1,'engineering': 1,'exploration': 0,
-                     'folklore': 0,'industry': 1,'intrigue': 0,'magic': 1,'politics': 1,'scholarship': 0,
-                     'statecraft': 1,'trade': 1,'warfare': 1,'wilderness': 0},
-                    {i: "filled" for i in Advisors.keys()}, {}, [30, 6, 13],
-                    {"food": [5, 8, 2],"lumber":[1,8,2],"stone":[3,8,1],"ore":[8,8,1],"luxuries":[0,0,0]},72)
-
 image1 = Image.open("GridlessMap75.jpeg")
-
 
 def main(kingdom=Greenbelt):
     w1 = tk.Tk()
@@ -64,7 +40,7 @@ def main(kingdom=Greenbelt):
     settlements_tab = ttk.Frame(tabControl)    
     tabControl.add(kingdom_overview, text="Kingdom Overview")
     tabControl.add(kingdom_details, text="Kingdom Details")
-    tabControl.add(settlements_tab, text="Settlements")       
+    tabControl.add(settlements_tab, text="Settlements & Buildings")       
     tabControl.grid(row=1, column=0, columnspan=5000)    
     tabs = [kingdom_overview,kingdom_details,settlements_tab]
     
@@ -159,11 +135,6 @@ def main(kingdom=Greenbelt):
 
     draw_hex_grid()
 
-    # def draw_hex_centers():
-    # test function, not useful for main app
-    # for (x,y) in hex_center_list:
-    #     map_canvas.create_oval(x-5,y-5,x+5,y+5)
-    # draw_hex_centers()
     def identify_hex(mouse_x, mouse_y):
         # returns the pixel coordinates of the top vertex of the grid hex where the mouse was clicked
         nearest_hex_center = (0, 0)
@@ -518,9 +489,169 @@ def main(kingdom=Greenbelt):
             penalty = tk.Label(main_frame,text="0")
             penalty.grid(row=startrow,column=3)
             startrow += 1
-            
-        
     
     draw_ruins_table()
+    
+    def draw_settlements_table():
+        settlements_frame = tk.Frame(settlements_tab,borderwidth=1,relief="groove")
+        settlements_frame.grid(row=2,column=0,sticky="n")
+        ####################
+        header_frame=tk.Frame(settlements_frame)
+        header_frame.grid(row=0,column=0,columnspan=50)
+        header = tk.Label(header_frame,text="Settlements",font=("Segoe UI",10,"bold"))
+        header.grid(row=0,column=0,columnspan=50)
+        hsep1 = ttk.Separator(settlements_frame,orient="horizontal")
+        hsep1.grid(row=1,column=0,columnspan=50,sticky="ew")
+        #################################
+        name_label = tk.Label(settlements_frame,text="Name")
+        name_label.grid(row=2,column=0)
+        level_label = tk.Label(settlements_frame,text="Level",padx=2)
+        level_label.grid(row=2,column=1)
+        type_label = tk.Label(settlements_frame,text="Type",padx=2)
+        type_label.grid(row=2,column=2)        
+        residences_label = tk.Label(settlements_frame,text="Residences",padx=2)
+        residences_label.grid(row=2,column=3)
+        buildings_label = tk.Label(settlements_frame,text="Buildings",padx=2)
+        buildings_label.grid(row=2,column=4,columnspan=6)
+        hsep2 = ttk.Separator(settlements_frame,orient="horizontal")
+        hsep2.grid(row=3,column=0,columnspan=50,sticky="ew")
+        #####################################
+        settlement_row = 4
+        for settlement in kingdom.settlements:            
+            def settlement_type(occupied_blocks):
+                types = {1:"Village",4:"Town",9:"City",14:"Metropolis"}
+                key = min([i for i in types.keys() if occupied_blocks <= i])
+                return types[key]            
+            name = tk.Label(settlements_frame,text=settlement.name)
+            level = tk.Label(settlements_frame,text=settlement.level)
+            type_value = tk.Label(settlements_frame,text=settlement_type(settlement.occupied_blocks))
+            name.grid(row=settlement_row,column=0)
+            level.grid(row=settlement_row,column=1)
+            type_value.grid(row=settlement_row,column=2)
+            num_residences = tk.Label(settlements_frame,
+                                      text=str(sum([j for (i,j) in settlement.buildings.items() if i.residential])))
+            num_residences.grid(row=settlement_row,column=3)
+            buildings_frame = tk.Frame(settlements_frame)
+            buildings_frame.grid(row=settlement_row,column=4)
+            building_row = 0
+            for building in settlement.buildings:
+                building_name = tk.Label(buildings_frame,text=building.name)
+                building_quantity = tk.Label(buildings_frame,text=str(settlement.buildings[building]))
+                building_name.grid(row=building_row,column=0)
+                building_quantity.grid(row=building_row,column=1)
+                building_row += 1            
+            settlement_row += 1
+            hsep2 = ttk.Separator(settlements_frame,orient="horizontal")
+            hsep2.grid(row=settlement_row,column=0,columnspan=50,sticky="ew")
+            settlement_row += 1          
+                
+    draw_settlements_table()
+    
+    def building_finder():
+        master_frame = tk.Frame(settlements_tab)
+        master_frame.grid(row=2,column=2,sticky="n",padx=20)        
+        #########################
+        header_frame = tk.Frame(master_frame)        
+        header = tk.Label(header_frame,text="Buildings Search",font=("Segoe UI",10,"bold"))
+        header.grid(row=0,column=0,columnspan=500,sticky="nsew")
+        hsep0 = ttk.Separator(header_frame,orient="horizontal")
+        hsep0.grid(row=1,column=0,columnspan=500,sticky="ew")        
+        header_frame.grid(row=0,column=0,columnspan=500)
+        ####################
+        search_frame = tk.Frame(master_frame)
+        search_frame.grid(row=1,column=0)
+        feasible_to_build = tk.Label(search_frame,text="Buildable on a 10 or lower?")
+        feasible_to_build.grid(row=0,column=0)
+        ####################
+        buildings_frame = tk.Frame(master_frame,height=800)
+        buildings_frame.grid(row=2,column=0)
+        buildings_header = tk.Frame(buildings_frame,width=850)
+        buildings_header.grid(row=0,column=0)
+        buildings_canvas = tk.Canvas(buildings_frame,width=850,height=500)        
+        buildings_canvas.grid(row=1,column=0)     
+        vscroll = tk.Scrollbar(buildings_frame,orient="vertical",command=buildings_canvas.yview)
+        vscroll.grid(row=1,column=1,rowspan=500,sticky="ns")
+        buildings_canvas.configure(yscrollcommand=vscroll.set)
+        buildings_canvas.bind("<Configure>", 
+                              lambda e: buildings_canvas.configure(scrollregion = buildings_canvas.bbox("all")))
+        inner_frame = tk.Frame(buildings_canvas)
+        buildings_canvas.create_window((0,0), window=inner_frame, anchor="nw")
+        #############################
+        name_width = 17
+        skill_width = 10
+        dc_width = 5
+        lots_width = 5 
+        rp_width = 7
+        materials_width = 10
+        residential_width = 8 
+        unrest_width = 8 
+        ruins_width = 10
+        consumption_width = 14
+        description_width = 20
+        ###########################
+        hsep1=ttk.Separator(buildings_header,orient="horizontal")
+        hsep1.grid(row=0,column=0,columnspan=50,sticky="ew")   
+        building_name = tk.Label(buildings_header,text="Name",width=name_width)
+        building_name.grid(row=1,column=0,sticky="ew")
+        building_skill = tk.Label(buildings_header,text="Skill",width=skill_width)
+        building_skill.grid(row=1,column=1,sticky="ew")
+        building_DC = tk.Label(buildings_header,text="DC",width=dc_width)
+        building_DC.grid(row=1,column=2,sticky="ew")
+        lots_label = tk.Label(buildings_header,text="Lots",width=lots_width)
+        lots_label.grid(row=1,column=3,sticky="ew")
+        RP_label = tk.Label(buildings_header,text="RP Cost",width=rp_width)
+        RP_label.grid(row=1,column=4,sticky="ew")
+        materials_label = tk.Label(buildings_header,text="Material \n Cost",width=materials_width)
+        materials_label.grid(row=1,column=5,sticky="ew")
+        residence_label = tk.Label(buildings_header,text="Residential?",width=residential_width)
+        residence_label.grid(row=1,column=6,sticky="ew")
+        affects_unrest = tk.Label(buildings_header,text="Affects \n Unrest?",width=unrest_width)
+        affects_unrest.grid(row=1,column=7,sticky="ew")
+        affects_ruins = tk.Label(buildings_header,text="Affects \n Ruins?",width=ruins_width)
+        affects_ruins.grid(row=1,column=8,sticky="ew")
+        affects_consumption = tk.Label(buildings_header,text="Affects \n Consumption?",width=consumption_width)
+        affects_consumption.grid(row=1,column=9,sticky="ew")
+        description = tk.Label(buildings_header,text="Description",width=description_width)
+        description.grid(row=1,column=10,sticky="ew")
+        hsep2=ttk.Separator(buildings_header,orient="horizontal")
+        hsep2.grid(row=2,column=0,columnspan=50,sticky="ew")        
+        ###############
+        buildings_row = 3
+        for building in Buildings:
+            name = tk.Label(inner_frame,text=building.name,width=name_width)
+            name.grid(row=buildings_row,column=0)
+            skill = tk.Label(inner_frame,text=building.skill,width=skill_width)
+            skill.grid(row=buildings_row, column=1)
+            dc = tk.Label(inner_frame,text=building.DC,width=dc_width)
+            dc.grid(row=buildings_row,column=2)
+            lots = tk.Label(inner_frame,text=building.lots,width=lots_width)
+            lots.grid(row=buildings_row,column=3)
+            rp = tk.Label(inner_frame,text=building.RP,width=rp_width)
+            rp.grid(row=buildings_row,column=4)
+            materials = tk.Frame(inner_frame,width=materials_width)
+            materials.grid(row=buildings_row,column=5)
+            lumber = tk.Label(materials,text="Lumber: " + str(building.lumber))
+            lumber.grid(row=0,column=0)
+            stone = tk.Label(materials,text="Stone: " + str(building.stone))
+            stone.grid(row=1,column=0)
+            ore = tk.Label(materials,text="Ore: " + str(building.ore))
+            ore.grid(row=2,column=0)
+            luxuries = tk.Label(materials,text="Luxuries: " + str(building.luxuries))
+            luxuries.grid(row=3,column=0)
+            residential = tk.Label(inner_frame,text=str(building.residential),width=residential_width)
+            residential.grid(row=buildings_row,column=6)
+            unrest = tk.Label(inner_frame,text=str(building.unrest),width=unrest_width)
+            unrest.grid(row=buildings_row,column=7)
+            ruins = tk.Label(inner_frame,text=str("Placeholder"),width=ruins_width)
+            ruins.grid(row=buildings_row,column=8)
+            consumption = tk.Label(inner_frame,text=str(building.consumption),width=consumption_width)
+            consumption.grid(row=buildings_row,column=9)
+            description = tk.Label(inner_frame,text="Lorem ipsum dolor...",width=description_width)
+            description.grid(row=buildings_row,column=10)
+            buildings_row += 1
+            hsep3=ttk.Separator(inner_frame,orient="horizontal")
+            hsep3.grid(row=buildings_row,column=0,columnspan=50,sticky="ew")
+            buildings_row += 1        
+    building_finder()
     
     w1.mainloop()
