@@ -95,8 +95,31 @@ Museum = Building("Museum", 2, 5, [30, 6, 2, 0, 0], ["Exploration", 1, 20], 0, [
 Sacredgrove = Building("Sacred Grove", 1, 5, [36, 0, 0, 0, 0], ["Wilderness", 1, 20], 0, [0, 0, 0, 0, 0], False, False,
                        {"Quell Unrest (Folklore)": 1}, {})
 
-Buildings = (Rubble, Tenement, Brewery, Cemetery, GeneralStore, Granary, Herbalist, Houses, Inn, Shrine, DiveTavern,
+Buildings = (Tenement, Brewery, Cemetery, GeneralStore, Granary, Herbalist, Houses, Inn, Shrine, DiveTavern,
              WoodenWall, Bridge, Dump, Jail, Library, Mill, Orphanage, TownHall, AlchemyLab, PopularTavern, Barracks,
              Foundry, FestivalHall, Keep, Lumberyard, Monument, Park, Pier, Smithy, Stable, Stockyard, Stonemason,
              Tannery, TradeShop, Watchtower, Marketplace, Pavedstreets, Specialartisan, Arcanist, Bank, Garrison,
-             Guildhall, Magiclamps, Mansion, Museum, Sacredgrove)
+             Guildhall, Magiclamps, Mansion, Museum, Sacredgrove,Rubble)
+
+Noktown = Settlement("Noktown", (1013.2497224277931, 273.0), 2,
+                     {Houses: 2, GeneralStore: 1, TownHall: 1, AlchemyLab: 1, Mill: 1, PopularTavern: 1, WoodenWall: 1})
+Lizards = Settlement("Isle of the \n Lizard King", (909.3266739736605, 363.0), 1, {Houses: 1, Mill: 1, Shrine: 1,Bridge:1})
+Tatzlford = Settlement("Tatzlford", (883.3459118601273, 228.0), 2,
+                       {Houses: 1, TownHall: 1, Inn: 1, Orphanage: 1, Barracks: 1})
+Greenbelt = Kingdom("Greenbelt Republic", [(909.3266739736605, 273.0), (935.3074360871937, 228.0),
+                                           (883.3459118601273, 228.0), (961.2881982007268, 273.0),
+                                           (935.3074360871937, 318.0), (909.3266739736605, 363.0),
+                                           (1013.2497224277931, 273.0), (987.26896031426, 228.0),
+                                           (1039.2304845413264, 228.0), (1065.2112466548595, 273.0),
+                                           (1039.2304845413264, 318.0), (1091.1920087683927, 228.0),
+                                           (1065.2112466548595, 183.0), (1013.2497224277931, 183.0),
+                                           (961.2881982007268, 183.0), (935.3074360871937, 138.0),
+                                           (1039.2304845413264, 138.0), (1013.2497224277931, 93.0),
+                                           (1065.2112466548595, 93.0)],
+                    5, 0, {i: 0 for i in Ruins}, [Noktown, Lizards, Tatzlford],
+                    {"culture": 14, "economy": 16, "loyalty": 14, "stability": 14},
+                    {'agriculture': 0,'arts': 1,'boating': 0,'defense': 1,'engineering': 1,'exploration': 0,
+                     'folklore': 0,'industry': 1,'intrigue': 0,'magic': 1,'politics': 1,'scholarship': 0,
+                     'statecraft': 1,'trade': 1,'warfare': 1,'wilderness': 0},
+                    {i: "filled" for i in Advisors.keys()}, {}, [30, 6, 13],
+                    {"food": [5, 8, 2],"lumber":[1,8,2],"stone":[3,8,1],"ore":[8,8,1],"luxuries":[0,0,0]},72)

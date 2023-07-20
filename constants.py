@@ -23,8 +23,12 @@ Kingdom_skills = {"agriculture": "stability", "arts": "culture", "boating": "eco
 Ruins = ["corruption", "crime", "decay", "strife"]
 Advisors = {"ruler": "loyalty", "emissary": "loyalty", "general": "stability", "magister": "culture",
             "counselor": "culture", "treasurer": "economy", "viceroy": "economy", "warden": "stability"}
-size_thresholds = {0: 0, 9: 1, 24: 2, 49: 3,
-                   99: 4}  # Dict, number of claimed hexes corresponding to upper limit for indicated size penalty
+size_thresholds = {0: {"type":"Territory","rd size":4,"dc modifier":0,"storage":4}, 
+                   9: {"type":"Province","rd size":6,"dc modifier":1,"storage":8}, 
+                   24: {"type":"State","rd size":8,"dc modifier":2,"storage":12}, 
+                   49: {"type":"Country","rd size":10,"dc modifier":3,"storage":16}, 
+                   99: {"type":"Dominion","rd size":4,"dc modifier":4,"storage":20}}  
+# Dict, no. claimed hexes corresponding to upper limit for indicated size penalty
 control_DC_table = {1: 14, 2: 15, 3: 16, 4: 18, 5: 20, 6: 22, 7: 23, 8: 24, 9: 26, 10: 27, 11: 28, 12: 30, 13: 31,
                     14: 32,
                     15: 34, 16: 35, 17: 36, 18: 38, 19: 39, 20: 40}  # {Kingdom level:control DC}
