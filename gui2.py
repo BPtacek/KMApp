@@ -548,7 +548,7 @@ def main(kingdom=Greenbelt):
     draw_settlements_table()
     
     def building_finder():
-        master_frame = tk.Frame(settlements_tab)
+        master_frame = tk.Frame(settlements_tab,borderwidth=1,relief="groove")
         master_frame.grid(row=2,column=2,sticky="n",padx=20)        
         #########################
         header_frame = tk.Frame(master_frame)        
@@ -560,10 +560,50 @@ def main(kingdom=Greenbelt):
         ####################
         search_frame = tk.Frame(master_frame)
         search_frame.grid(row=1,column=0)
-        feasible_to_build = tk.Label(search_frame,text="Buildable on a 10 or lower?")
-        feasible_to_build.grid(row=0,column=0)
+        max_roll = tk.IntVar(search_frame,value=100)                        
+        ekun_var = tk.IntVar(search_frame,value=0)
+        residential_var = tk.IntVar(search_frame,value=0)
+        unrest_var = tk.IntVar(search_frame,value=0)
+        ruins_var = tk.IntVar(search_frame,value=0)
+        consumption_var = tk.IntVar(search_frame,value=0)
+        ##########################
+        def refresher():
+            # generate a list of buildings satisfying the criteria specified using the checkboxes and dice roll field            
+            buildings_list = building_picker(max_roll=max_roll.get(), require_unrest=unrest_var.get(),
+                                             require_consumption=consumption_var.get(),
+                                             require_residential=residential_var.get(),
+                                             require_ruins=ruins_var.get(), Ekun_modifier=ekun_var.get())
+            draw_buildings_list(buildings_list)
+        #####################
+        ekun_checkbox = tk.Checkbutton(search_frame,text="Apply Ekundayo's DC modifier ",
+                                       variable=ekun_var,onvalue=1,offvalue=0,
+                                       command=lambda:refresher())
+        ekun_checkbox.grid(row=0,column=0)
+        residential_checkbox = tk.Checkbutton(search_frame,text="Only show residential buildings",
+                                       variable=residential_var,onvalue=1,offvalue=0,
+                                       command=lambda:refresher())
+        residential_checkbox.grid(row=0,column=1)
+        unrest_checkbox = tk.Checkbutton(search_frame,text="Only show buildings that affect Unrest",
+                                       variable=unrest_var,onvalue=1,offvalue=0,
+                                       command=lambda:refresher())
+        unrest_checkbox.grid(row=1,column=0,padx=5)
+        consumption_checkbox = tk.Checkbutton(search_frame,text="Only show buildings that affect Consumption",
+                                              variable=consumption_var,onvalue=1,offvalue=0,
+                                              command=lambda:refresher())
+        consumption_checkbox.grid(row=1,column=1,padx=5)
+        ruins_checkbox = tk.Checkbutton(search_frame,text="Only show buildings that affect Ruins",
+                                              variable=ruins_var,onvalue=1,offvalue=0,
+                                              command=lambda:refresher())
+        ruins_checkbox.grid(row=1,column=2,columnspan=2,padx=5)
+        roll_to_build = tk.Label(search_frame,text="Max roll needed to build:")
+        roll_to_build.grid(row=0,column=2,sticky="e")        
+        roll_entry = tk.Entry(search_frame,textvariable=max_roll,width=3)
+        roll_entry.grid(row=0,column=3,sticky="w")
+        def roll_listener(event=None):
+            refresher()
+        roll_entry.bind("<Return>",roll_listener)
         ####################
-        buildings_frame = tk.Frame(master_frame,height=800)
+        buildings_frame = tk.Frame(master_frame,height=600)
         buildings_frame.grid(row=2,column=0)
         buildings_header = tk.Frame(buildings_frame,width=850)
         buildings_header.grid(row=0,column=0)
@@ -574,9 +614,8 @@ def main(kingdom=Greenbelt):
         buildings_canvas.configure(yscrollcommand=vscroll.set)
         buildings_canvas.bind("<Configure>", 
                               lambda e: buildings_canvas.configure(scrollregion = buildings_canvas.bbox("all")))
-        inner_frame = tk.Frame(buildings_canvas)
-        buildings_canvas.create_window((0,0), window=inner_frame, anchor="nw")
         #############################
+        # parameters to force alignment of the columns in the header frame and scrollable buildings list
         name_width = 17
         skill_width = 10
         dc_width = 5
@@ -589,6 +628,7 @@ def main(kingdom=Greenbelt):
         consumption_width = 14
         description_width = 20
         ###########################
+        ## generate the header frame's content
         hsep1=ttk.Separator(buildings_header,orient="horizontal")
         hsep1.grid(row=0,column=0,columnspan=50,sticky="ew")   
         building_name = tk.Label(buildings_header,text="Name",width=name_width)
@@ -615,43 +655,69 @@ def main(kingdom=Greenbelt):
         description.grid(row=1,column=10,sticky="ew")
         hsep2=ttk.Separator(buildings_header,orient="horizontal")
         hsep2.grid(row=2,column=0,columnspan=50,sticky="ew")        
-        ###############
-        buildings_row = 3
-        for building in Buildings:
-            name = tk.Label(inner_frame,text=building.name,width=name_width)
-            name.grid(row=buildings_row,column=0)
-            skill = tk.Label(inner_frame,text=building.skill,width=skill_width)
-            skill.grid(row=buildings_row, column=1)
-            dc = tk.Label(inner_frame,text=building.DC,width=dc_width)
-            dc.grid(row=buildings_row,column=2)
-            lots = tk.Label(inner_frame,text=building.lots,width=lots_width)
-            lots.grid(row=buildings_row,column=3)
-            rp = tk.Label(inner_frame,text=building.RP,width=rp_width)
-            rp.grid(row=buildings_row,column=4)
-            materials = tk.Frame(inner_frame,width=materials_width)
-            materials.grid(row=buildings_row,column=5)
-            lumber = tk.Label(materials,text="Lumber: " + str(building.lumber))
-            lumber.grid(row=0,column=0)
-            stone = tk.Label(materials,text="Stone: " + str(building.stone))
-            stone.grid(row=1,column=0)
-            ore = tk.Label(materials,text="Ore: " + str(building.ore))
-            ore.grid(row=2,column=0)
-            luxuries = tk.Label(materials,text="Luxuries: " + str(building.luxuries))
-            luxuries.grid(row=3,column=0)
-            residential = tk.Label(inner_frame,text=str(building.residential),width=residential_width)
-            residential.grid(row=buildings_row,column=6)
-            unrest = tk.Label(inner_frame,text=str(building.unrest),width=unrest_width)
-            unrest.grid(row=buildings_row,column=7)
-            ruins = tk.Label(inner_frame,text=str("Placeholder"),width=ruins_width)
-            ruins.grid(row=buildings_row,column=8)
-            consumption = tk.Label(inner_frame,text=str(building.consumption),width=consumption_width)
-            consumption.grid(row=buildings_row,column=9)
-            description = tk.Label(inner_frame,text="Lorem ipsum dolor...",width=description_width)
-            description.grid(row=buildings_row,column=10)
-            buildings_row += 1
-            hsep3=ttk.Separator(inner_frame,orient="horizontal")
-            hsep3.grid(row=buildings_row,column=0,columnspan=50,sticky="ew")
-            buildings_row += 1        
+        ###############                
+        def building_picker(max_roll=10,require_unrest=False,require_consumption=False,
+                            require_residential=False,require_ruins=False,Ekun_modifier=False):
+            # generates a list of buildings satisfying the criteria specified in search_frame
+            outlist = []  
+            for building in Buildings:
+                Ekun_modifier = 2 * Ekun_modifier * (building.lumber != 0)
+                if building.skill.lower() in Kingdom_skills:
+                    modifier = kingdom.get_modifier(building.skill.lower())
+                    roll_satisfied = (max_roll + modifier) >= (building.DC - Ekun_modifier)
+                else: roll_satisfied = False                
+                unrest_satisfied = (not require_unrest) or (building.unrest != 0)
+                consumption_satisfied = (not require_consumption) or building.consumption
+                residential_satisfied = (not require_residential) or building.residential
+                ruin = building.ruin + building.corruption + building.crime + building.decay + building.strife
+                ruin_satisfied = (not require_ruins) or (ruin != 0)
+                if roll_satisfied and unrest_satisfied and consumption_satisfied and residential_satisfied and ruin_satisfied:
+                    outlist.append(building)
+            return outlist
+        #########################
+        def draw_buildings_list(input_list):
+            # draws or refreshes the scrollable building list
+            buildings_row = 3            
+            buildings_canvas.delete("all") 
+            inner_frame = tk.Frame(buildings_canvas)
+            buildings_canvas.create_window((0,0), window=inner_frame, anchor="nw")
+            for building in input_list:
+                name = tk.Label(inner_frame,text=building.name,width=name_width)
+                name.grid(row=buildings_row,column=0)
+                skill = tk.Label(inner_frame,text=building.skill,width=skill_width)
+                skill.grid(row=buildings_row, column=1)
+                dc = tk.Label(inner_frame,text=building.DC,width=dc_width)
+                dc.grid(row=buildings_row,column=2)
+                lots = tk.Label(inner_frame,text=building.lots,width=lots_width)
+                lots.grid(row=buildings_row,column=3)
+                rp = tk.Label(inner_frame,text=building.RP,width=rp_width)
+                rp.grid(row=buildings_row,column=4)
+                materials = tk.Frame(inner_frame,width=materials_width)
+                materials.grid(row=buildings_row,column=5)
+                lumber = tk.Label(materials,text="Lumber: " + str(building.lumber))
+                lumber.grid(row=0,column=0)
+                stone = tk.Label(materials,text="Stone: " + str(building.stone))
+                stone.grid(row=1,column=0)
+                ore = tk.Label(materials,text="Ore: " + str(building.ore))
+                ore.grid(row=2,column=0)
+                luxuries = tk.Label(materials,text="Luxuries: " + str(building.luxuries))
+                luxuries.grid(row=3,column=0)
+                residential = tk.Label(inner_frame,text=str(building.residential),width=residential_width)
+                residential.grid(row=buildings_row,column=6)
+                unrest = tk.Label(inner_frame,text=str(building.unrest),width=unrest_width)
+                unrest.grid(row=buildings_row,column=7)
+                ruins = tk.Label(inner_frame,text=str((building.ruin + building.corruption + building.crime + 
+                                          building.decay + building.strife) != 0),width=ruins_width)
+                ruins.grid(row=buildings_row,column=8)
+                consumption = tk.Label(inner_frame,text=str(building.consumption),width=consumption_width)
+                consumption.grid(row=buildings_row,column=9)
+                description = tk.Label(inner_frame,text="Lorem ipsum dolor...",width=description_width)
+                description.grid(row=buildings_row,column=10)
+                buildings_row += 1
+                hsep3=ttk.Separator(inner_frame,orient="horizontal")
+                hsep3.grid(row=buildings_row,column=0,columnspan=50,sticky="ew")
+                buildings_row += 1
+        draw_buildings_list(building_picker(max_roll=100))
     building_finder()
     
     w1.mainloop()

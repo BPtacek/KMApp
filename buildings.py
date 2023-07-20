@@ -12,10 +12,10 @@ Tenement = Building("Tenement", 1, 1, [1, 1, 0, 0, 0], ["Industry", 0, 14], 1, [
 Brewery = Building("Brewery", 1, 1, [6, 2, 0, 0, 0], ["Agriculture", 0, 15], 1, [0, 0, 0, 0, 0], False, False,
                    {"Establish Trade Agreement": 1}, {})
 Cemetery = Building("Cemetery", 1, 1, [4, 1, 0, 0, 0], ["Folklore", 0, 15], 1, [0, 0, 0, 0, 0], False, False, {}, {})
-GeneralStore = Building("General Store", 1, 1, [8, 1, 0, 0, 0], ["Trade", 0, 15], 1, [0, 0, 0, 0, 0], False, False,
+GeneralStore = Building("General Store", 1, 1, [8, 1, 0, 0, 0], ["Trade", 0, 15], 0, [0, 0, 0, 0, 0], False, False,
                         {"Establish Trade Agreement": 1}, {})
-Granary = Building("Granary", 1, 1, [12, 2, 0, 0, 0], ["Agriculture", 0, 15], 1, [0, 0, 0, 0, 0], False, False, {}, {})
-Herbalist = Building("Herbalist", 1, 1, [10, 1, 0, 0, 0], ["Wilderness", 0, 15], 1, [0, 0, 0, 0, 0], False, False,
+Granary = Building("Granary", 1, 1, [12, 2, 0, 0, 0], ["Agriculture", 0, 15], 0, [0, 0, 0, 0, 0], False, False, {}, {})
+Herbalist = Building("Herbalist", 1, 1, [10, 1, 0, 0, 0], ["Wilderness", 0, 15], 0, [0, 0, 0, 0, 0], False, False,
                      {"Provide Care": 1}, {})
 Houses = Building("Houses", 1, 1, [3, 1, 0, 0, 0], ["Industry", 0, 15], 1, [0, 0, 0, 0, 0], False, True, {}, {})
 Inn = Building("Inn", 1, 1, [10, 2, 0, 0, 0], ["Wilderness", 0, 15], 0, [0, 0, 0, 0, 0], False, True,
