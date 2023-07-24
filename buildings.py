@@ -7,6 +7,8 @@ Created on Sat Jul 15 20:41:06 2023
 # this file contains data for every building in the game
 from classes import *
 
+# building init: name, lots, level, cost, difficulty, unrest, ruins, consumption, residential,kingdom_item, PC_item)
+
 Rubble = Building("Rubble", 1, 0, [0, 0, 0, 0, 0], ["None", 0, 0], 0, [0, 0, 0, 0, 0], False, False, {}, {})
 Tenement = Building("Tenement", 1, 1, [1, 1, 0, 0, 0], ["Industry", 0, 14], 1, [1, 0, 0, 0, 0], False, True, {}, {})
 Brewery = Building("Brewery", 1, 1, [6, 2, 0, 0, 0], ["Agriculture", 0, 15], 1, [0, 0, 0, 0, 0], False, False,
@@ -38,8 +40,8 @@ Mill = Building("Mill", 1, 2, [6, 2, 1, 0, 0], ["Industry", 1, 16], 0, [0, 0, 0,
                 {"Harvest Crops": 1}, {})
 Orphanage = Building("Orphanage", 1, 2, [6, 2, 0, 0, 0], ["Industry", 0, 16], 1, [0, 0, 0, 0, 0], False, True, {}, {})
 TownHall = Building("Town Hall", 2, 2, [22, 4, 4, 0, 0], ["Defense", 1, 16], 1, [0, 0, 0, 0, 0], False, False, {}, {})
-AlchemyLab = Building("Alchemy Lab", 1, 3, [18, 0, 5, 2, 0], ["Industry", 1, 18], 0, [0, 0, 0, 0, 0], False, False,
-                      {"Demolish": 1}, {"Identify (Alchemical)": 1})
+AlchemyLab = Building("Alchemy Laboratory", 1, 3, [18, 0, 5, 2, 0], ["Industry", 1, 18], 0, [0, 0, 0, 0, 0], 
+                      False, False,{"Demolish": 1}, {"Identify (Alchemical)": 1})
 PopularTavern = Building("Tavern (Popular)", 1, 3, [24, 6, 2, 0, 0], ["Trade", 2, 18], 2, [0, 0, 0, 0, 0], False, False,
                          {"Hire Adventurers": 1, "Rest and Relax (Trade)": 1},
                          {"Earn Income (Performance)": 1, "Gather Information": 1})
@@ -94,18 +96,39 @@ Museum = Building("Museum", 2, 5, [30, 6, 2, 0, 0], ["Exploration", 1, 20], 0, [
                   {"Rest and Relax (Arts)": 1}, {})
 Sacredgrove = Building("Sacred Grove", 1, 5, [36, 0, 0, 0, 0], ["Wilderness", 1, 20], 0, [0, 0, 0, 0, 0], False, False,
                        {"Quell Unrest (Folklore)": 1}, {})
+Stonewall = Building("Stone Wall",0,5,[4,0,8,0,0],["Defense",1,20],1,[0,0,0,0,0],False,False,{},{})
+Illicitmarket = Building("Illicit Market",1,6,[50,5,0,0,0],["Intrigue",1,22],0,[0,0,1,0,0],False,False,
+                         {"Clandestine Business":1},{})
+Luxurystore = Building("Luxury Store",1,6,[28,10,0,0,6],["Trade",2,22],0,[0,0,0,0,0],False,False,
+                       {"Establish Trade Agreement":1},{})
+Securewarehouse = Building("Secure Warehouse",2,6,[24,6,6,4,0],["Industry",2,22],0,[0,0,0,0,0],False,False,
+                           {"Craft Luxuries":1},{})
+Sewers = Building("Sewer System",0,7,[24,8,8,0,0],["Engineering",2,23],0,[0,0,0,0,0],True,False,
+                 {"Clandestine Business":1},{})
+Temple = Building("Temple",2,7,[32,6,6,0,0],["Folklore",1,23],2,[0,0,0,0,0],False,False,
+                  {"Provide Care":1,"Celebrate Holiday":1},{})
+Embassy = Building("Embassy",2,8,[26,10,4,0,6],["Politics",0,24],0,[0,0,0,0,0],False,False,
+                   {"Request Foreign Aid":1,"Send Diplomatic Envoy":1},{})
+Magicshop = Building("Magic Shop",1,8,[44,8,6,0,6],["Magic",2,24],0,[0,0,0,0,0],False,False,
+                     {"Supernatural Solution":1},{})
+Waterfront = Building("Waterfront",4,8,[90,10,0,0,0],["Boating",2,24],0,[0,0,0,0,0],False,False,
+                      {"Rest and Relax (Boating)":1,"Go Fishing":1,"Establish Trade Agreement":1},{})
+
 
 Buildings = (Tenement, Brewery, Cemetery, GeneralStore, Granary, Herbalist, Houses, Inn, Shrine, DiveTavern,
              WoodenWall, Bridge, Dump, Jail, Library, Mill, Orphanage, TownHall, AlchemyLab, PopularTavern, Barracks,
              Foundry, FestivalHall, Keep, Lumberyard, Monument, Park, Pier, Smithy, Stable, Stockyard, Stonemason,
              Tannery, TradeShop, Watchtower, Marketplace, Pavedstreets, Specialartisan, Arcanist, Bank, Garrison,
-             Guildhall, Magiclamps, Mansion, Museum, Sacredgrove,Rubble)
+             Guildhall, Magiclamps, Mansion, Museum, Sacredgrove,Stonewall,Illicitmarket,Luxurystore,Securewarehouse,
+             Sewers,Temple,Embassy,Magicshop,Waterfront,Rubble)
 
-Noktown = Settlement("Noktown", (1013.2497224277931, 273.0), 2,
-                     {Houses: 2, GeneralStore: 1, TownHall: 1, AlchemyLab: 1, Mill: 1, PopularTavern: 1, WoodenWall: 1})
-Lizards = Settlement("Isle of the \n Lizard King", (909.3266739736605, 363.0), 1, {Houses: 1, Mill: 1, Shrine: 1,Bridge:1})
-Tatzlford = Settlement("Tatzlford", (883.3459118601273, 228.0), 2,
-                       {Houses: 1, TownHall: 1, Inn: 1, Orphanage: 1, Barracks: 1})
+Noktown = Settlement("Noktown", (1013.2497224277931, 273.0), 
+                     {Houses: 3, GeneralStore: 1, TownHall: 1, AlchemyLab: 1, Mill: 1, PopularTavern: 1, WoodenWall: 1,
+                      Magiclamps:1})
+Lizards = Settlement("Isle of the \n Lizard King", (909.3266739736605, 363.0),
+                     {Houses: 1, Mill: 1, Shrine: 1,Bridge:1,Barracks:1,Monument:1})
+Tatzlford = Settlement("Tatzlford", (883.3459118601273, 228.0),
+                       {Houses: 1, TownHall: 1, Inn: 1, Orphanage: 1, Barracks: 1,Mill:1})
 Greenbelt = Kingdom("Greenbelt Republic", [(909.3266739736605, 273.0), (935.3074360871937, 228.0),
                                            (883.3459118601273, 228.0), (961.2881982007268, 273.0),
                                            (935.3074360871937, 318.0), (909.3266739736605, 363.0),
@@ -116,10 +139,11 @@ Greenbelt = Kingdom("Greenbelt Republic", [(909.3266739736605, 273.0), (935.3074
                                            (961.2881982007268, 183.0), (935.3074360871937, 138.0),
                                            (1039.2304845413264, 138.0), (1013.2497224277931, 93.0),
                                            (1065.2112466548595, 93.0)],
-                    5, 0, {i: 0 for i in Ruins}, [Noktown, Lizards, Tatzlford],
+                    5, 0, {"corruption": 1,"crime":0,"decay":0,"strife":2}, [Noktown, Lizards, Tatzlford],
                     {"culture": 14, "economy": 16, "loyalty": 14, "stability": 14},
                     {'agriculture': 0,'arts': 1,'boating': 0,'defense': 1,'engineering': 1,'exploration': 0,
                      'folklore': 0,'industry': 1,'intrigue': 0,'magic': 1,'politics': 1,'scholarship': 0,
                      'statecraft': 1,'trade': 1,'warfare': 1,'wilderness': 0},
                     {i: "filled" for i in Advisors.keys()}, {}, [30, 6, 13],
-                    {"food": [5, 8, 2],"lumber":[1,8,2],"stone":[3,8,1],"ore":[8,8,1],"luxuries":[0,0,0]},72)
+                    {"food": [2, 8, 2],"lumber":[1,8,2],"stone":[6,8,1],"ore":[2,8,1],"luxuries":[1,0,0]},72,
+                    {"Mines":[],"Logging Camps":[],"Farms":[],"Quarries":[]},Noktown)

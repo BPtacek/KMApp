@@ -34,8 +34,7 @@ control_DC_table = {1: 14, 2: 15, 3: 16, 4: 18, 5: 20, 6: 22, 7: 23, 8: 24, 9: 2
                     15: 34, 16: 35, 17: 36, 18: 38, 19: 39, 20: 40}  # {Kingdom level:control DC}
 leadership_status_bonuses = {1: 1, 8: 2,
                              16: 3}  # kingdom level and associated status bonus to skill checks for filling leadership
-settlement_consumption_scaling = {1: 1, 4: 2, 9: 4,
-                                  10: 6}  # {settlement size threshold : settlement consumption value}.
+settlement_consumption_scaling = {1:1,2:2,4:5,6:10}  # {settlement size threshold : settlement consumption value}.
 
 
 # Settlment size is defined in numbers of filled blocks; each block has 4 lots.

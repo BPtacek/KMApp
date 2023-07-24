@@ -20,6 +20,15 @@ def main(kingdom=Greenbelt):
 
     def donothing():
         print("I am doing nothing!")
+        
+    def export_kingdom_as_file(file_name, kingdom=Greenbelt, print_only=False):
+        file_name = file_name if file_name.endswith(".json") else file_name + ".json"
+        kingdom_data = kingdom.export_kingdom_data()
+        if print_only:
+            print(json.dumps(kingdom_data, indent=4))
+            return
+        with open(f"{file_name}", "w") as f:
+            json.dump(kingdom_data, f, indent=4)   
     
     menubar = tk.Menu(w1)
     filemenu = tk.Menu(menubar, tearoff=0)
@@ -38,88 +47,127 @@ def main(kingdom=Greenbelt):
     kingdom_overview = ttk.Frame(tabControl)
     kingdom_details = ttk.Frame(tabControl)
     settlements_tab = ttk.Frame(tabControl)    
+    feats_tab = ttk.Frame(tabControl)    
+    activities_tab = ttk.Frame(tabControl)    
     tabControl.add(kingdom_overview, text="Kingdom Overview")
     tabControl.add(kingdom_details, text="Kingdom Details")
     tabControl.add(settlements_tab, text="Settlements & Buildings")       
+    tabControl.add(feats_tab, text="Kingdom Feats")       
+    tabControl.add(activities_tab, text="Kingdom Activities")       
     tabControl.grid(row=1, column=0, columnspan=5000)    
-    tabs = [kingdom_overview,kingdom_details,settlements_tab]
+    tabs = [kingdom_overview,kingdom_details,settlements_tab,feats_tab,activities_tab]
     
     attributes = ["loyalty","stability","culture","economy"]
+    prof_dict = {0:"Untrained",1:"Trained",2:"Expert",3:"Master",4:"Legendary"}
+    resources = ["lumber","stone","ore","luxuries"]
     attribute_variables = {i:tk.IntVar(w1,value=kingdom.get_attribute(i)) for i in attributes}
     skill_modifiers = {i:tk.IntVar(w1,value=kingdom.get_modifier(i)) for i in Kingdom_skills.keys()}
-    prof_dict = {0:"Untrained",1:"Trained",2:"Expert",3:"Master",4:"Legendary"}
     proficiency_variables = {i:tk.StringVar(w1) for i in Kingdom_skills.keys()}
-    ruin_variables = {i:tk.StringVar(w1,value=kingdom.ruins[i]) for i in Ruins}      
-      
-    def write_headline_stats():        
+    ruin_variables = {i:tk.StringVar(w1,value=kingdom.ruins[i]) for i in Ruins}
+    kingdom_level = tk.IntVar(w1, value=kingdom.level)
+    settlement_levels = {i:tk.IntVar(w1,value=i.occupied_blocks) for i in kingdom.settlements}
+    claimed_hexes = tk.IntVar(w1, kingdom.claimed_hexes)
+    
+    def update_globals():
+        attribute_variables = {i:tk.IntVar(w1,value=kingdom.get_attribute(i)) for i in attributes}
+        skill_modifiers = {i:tk.IntVar(w1,value=kingdom.get_modifier(i)) for i in Kingdom_skills.keys()}
+        proficiency_variables = {i:tk.StringVar(w1) for i in Kingdom_skills.keys()}
+        ruin_variables = {i:tk.StringVar(w1,value=kingdom.ruins[i]) for i in Ruins}
+        kingdom_level = tk.IntVar(w1, value=kingdom.level)
+        settlement_levels = {i:tk.IntVar(w1,value=i.occupied_blocks) for i in kingdom.settlements}
+        claimed_hexes = tk.IntVar(w1, kingdom.claimed_hexes)
+        
+    def delete_frame_contents(frame):
+        for widget in frame.winfo_children():
+            widget.destroy()
+    
+    headline_frames = {}
+    def create_headline_structure():
+        # create the three headline frames for each tab to dislay key kingdoms stats and link them to 
+        # a dictionary of global variables so they can be destroyed rather than overwritten
+        index = 1
         for tab in tabs:
-            headline_frame = tk.Frame(tab)
-            headline_frame.grid(column=0, row=1, columnspan=5000,sticky="w")
-            top_separator = ttk.Separator(headline_frame, orient="horizontal")
-            top_separator.grid(column=0, row=0, columnspan=5000, sticky="ew")
-            bottom_separator = ttk.Separator(headline_frame, orient="horizontal")
-            bottom_separator.grid(column=0, row=2, columnspan=5000, sticky="ew")       
-            #############            
-            level_label = tk.Label(headline_frame, text="Level: " + str(kingdom.level))            
-            level_label.grid(row=1, column=0,padx=10)
-            ################            
-            control_label = tk.Label(headline_frame, text="Control DC: " + str(kingdom.control_DC))
-            control_label.grid(row=1, column=1,padx=10)
-            #########################            
-            hexes_label = tk.Label(headline_frame, text="Claimed Hexes: " + str(len(kingdom.claimed_hexes))) 
+            top_separator = ttk.Separator(tab, orient="horizontal")
+            top_separator.grid(column=0, row=0, columnspan=20, sticky="ew")
+            headline_frames[index] = tk.Frame(tab)
+            headline_frames[index].grid(row=1,column=0,columnspan=20)        
+            bottom_separator = ttk.Separator(tab, orient="horizontal")
+            bottom_separator.grid(column=0, row=2, columnspan=20, sticky="ew")
+            index += 1    
+    create_headline_structure()
+    
+    def write_headline_stats():
+        index = 1
+        for tab in tabs:
+            delete_frame_contents(headline_frames[index])
+            level_label = tk.Label(headline_frames[index], text="Level: " + str(kingdom.level)) 
+            level_label.grid(row=1, column=0)
+            control_label = tk.Label(headline_frames[index], text="Control DC: " + str(kingdom.control_DC))
+            control_label.grid(row=1, column=1,padx=10)            
+            hexes_label = tk.Label(headline_frames[index], text="Claimed Hexes: " + str(len(kingdom.claimed_hexes))) 
             hexes_label.grid(row=1, column=2,padx=10)
+            vsep1 = ttk.Separator(headline_frames[index],orient="vertical")
+            vsep1.grid(row=1,column=3,sticky="nsew")
             ########################
-            unrest_label = tk.Label(headline_frame, text="Unrest: " + str(kingdom.unrest))
-            unrest_label.grid(row=1, column=3, padx=10)
-            ############################
-            food_label = tk.Label(headline_frame, text="Food: " + str(kingdom.resources["food"][0]))
+            food_label = tk.Label(headline_frames[index], text="Food: " + str(kingdom.resources["food"][0]))
             food_label.grid(row=1, column=4, padx=10)
-            food_capacity_label = tk.Label(headline_frame, text="Food Consumed/Turn: " + str(kingdom.get_consumption()))
+            food_capacity_label = tk.Label(headline_frames[index], text="Food Consumed/Turn: " + 
+                                           str(kingdom.get_consumption()))
             food_capacity_label.grid(row=1, column=5, padx=10)
-            food_turn_label = tk.Label(headline_frame, text="Food Gained/Turn: " + str(kingdom.resources["food"][2]))
+            food_turn_label = tk.Label(headline_frames[index], text="Food Gained/Turn: " + 
+                                       str(kingdom.resources["food"][2]))
             food_turn_label.grid(row=1, column=6, padx=10)
+            vsep2 = ttk.Separator(headline_frames[index],orient="vertical")
+            vsep2.grid(row=1,column=7,sticky="nsew")
             ##############################
-            resource_dice_label = tk.Label(headline_frame, text = "Base Resource Dice: " + kingdom.get_base_resource_die_string())
-            resource_dice_label.grid(row=1, column=8, padx=10)
-            ##################################
-            ruin_startcol=9
+            resource_dice_label = tk.Label(headline_frames[index], text = "Base Resource Dice: " + 
+                                           kingdom.get_base_resource_die_string())
+            resource_dice_label.grid(row=1, column=8, padx=10)            
+            resource_col = 9
+            for resource in resources:
+                resource_label = tk.Label(headline_frames[index],
+                                          text=resource.title() + ": " + str(kingdom.resources[resource][0]))
+                resource_label.grid(row=1,column=resource_col,padx=10)
+                resource_col += 1
+            vsep3 = ttk.Separator(headline_frames[index],orient="vertical")
+            vsep3.grid(row=1,column=13,sticky="nsew")
+            ########################
+            unrest_label = tk.Label(headline_frames[index], text="Unrest: " + str(kingdom.unrest))
+            unrest_label.grid(row=1, column=14, padx=10)            
+            ruin_startcol=15
             for ruin in Ruins:
-                ruin_label = tk.Label(headline_frame,text = ruin.title() + ": " + str(kingdom.ruins[ruin]))
+                ruin_label = tk.Label(headline_frames[index],text = ruin.title() + ": " + str(kingdom.ruins[ruin]))
                 ruin_label.grid(row=1, column=ruin_startcol,padx=10)
                 ruin_startcol += 1
+            vsep4 = ttk.Separator(headline_frames[index],orient="vertical")
+            vsep4.grid(row=1,column=19,sticky="nsew")
+            index += 1
             
     write_headline_stats()
-    # the above displays the headline kingdom stats - level, control DC, number claimed hexes, unrest, food status, ruins
-    
-    # the above draws the cells of the skills/attributes table
+    # the above displays the headline kingdom stats shown at the top of every tab:
+    # level, control DC, number of claimed hexes, unrest, food status, ruins
+        
     hexagon_side_length = 30
     hex_angle = 60
     map_canvas = tk.Canvas(kingdom_overview, width=1530, height=540)
     worldmap = ImageTk.PhotoImage(image1)
     map_canvas.create_image(0, 0, anchor="nw", image=worldmap)
-
-    # the above defines key hex grid parameters, creates the world map window, and places it beside the attribute table
+    # the above defines key hex grid parameters and creates the world map canvas
+    
     def draw_hexagon(x=0, y=0, color="black", linewidth=0):
         # draws a single hexagon
         start_x = x
         start_y = y
-        length = hexagon_side_length
-        angle = hex_angle
         for i in range(6):
-            end_x = start_x + length * cos(radians(30 + angle * i))
-            end_y = start_y + length * sin(radians(30 + angle * i))
-            map_canvas.create_line(start_x,
-                                   start_y,
-                                   end_x,
-                                   end_y,
-                                   fill=color,
-                                   width=linewidth)
+            end_x = start_x + hexagon_side_length * cos(radians(30 + hex_angle * i))
+            end_y = start_y + hexagon_side_length * sin(radians(30 + hex_angle * i))
+            map_canvas.create_line(start_x, start_y, end_x, end_y, fill=color, width=linewidth)
             start_x = end_x
             start_y = end_y
 
     grid_vertical_offset = -1.4 * hexagon_side_length  # parameter to adjust grid position so it matches in-game map
-    hex_center_list = []
-
+    
+    hex_center_list = [] # global list needed for detecting map clicks
     def draw_hex_grid():
         # draws a grid of hexagons over the world map. hexagons are drawn starting from the "top" vertex.     
         length = hexagon_side_length  # renaming for brevity
@@ -176,12 +224,10 @@ def main(kingdom=Greenbelt):
             return float(f'{a:.5f}')
         for (x, y) in kingdom.claimed_hexes:
             start_x = x
-            start_y = y
-            length = hexagon_side_length
-            angle = hex_angle
+            start_y = y            
             for i in range(6):
-                end_x = start_x + length * cos(radians(30 + angle * i))
-                end_y = start_y + length * sin(radians(30 + angle * i))
+                end_x = start_x + hexagon_side_length * cos(radians(30 + hex_angle * i))
+                end_y = start_y + hexagon_side_length * sin(radians(30 + hex_angle * i))
                 x1 = truncate(start_x)
                 x2 = truncate(end_x)
                 y1 = truncate(start_y)
@@ -199,7 +245,7 @@ def main(kingdom=Greenbelt):
     map_canvas.grid(row=4, column=0, rowspan=30, columnspan=300)
 
     # the above adds the world map image, draws the hex grid, and controls addition/removal of kingdom hexes
-
+   
     def update_skill_modifiers():
         for skill in Kingdom_skills.keys():
             skill_modifiers[skill].set(kingdom.get_modifier(skill))
@@ -230,8 +276,8 @@ def main(kingdom=Greenbelt):
     def update_proficiencies():        
         for skill in Kingdom_skills.keys():
             prof = kingdom.skills[skill]
-            str = prof_dict[prof]
-            proficiency_variables[skill].set(str)    
+            prof_string = prof_dict[prof]
+            proficiency_variables[skill].set(prof_string)    
     
     def draw_attribute_overview():
         attribute_table_startrow=38
@@ -273,16 +319,6 @@ def main(kingdom=Greenbelt):
             attribute_table_startcol += 1
     
     draw_attribute_overview()
-                
-    def export_kingdom_as_file(file_name, kingdom=Greenbelt, print_only=False):
-        file_name = file_name if file_name.endswith(".json") else file_name + ".json"
-        kingdom_data = kingdom.export_kingdom_data()
-        if print_only:
-            print(json.dumps(kingdom_data, indent=4))
-            return
-        with open(f"{file_name}", "w") as f:
-            json.dump(kingdom_data, f, indent=4)   
-     
     
     def draw_attribute_details():
         # draw the detailed attributes/skills/leaders table in the Kingdom Details tab
@@ -440,10 +476,7 @@ def main(kingdom=Greenbelt):
         main_frame = tk.Frame(unrest_frame)
         main_frame.grid(row=1,column=0)
         unrest_label = tk.Label(main_frame,text="Unrest: " + str(kingdom.unrest))
-        def unrest_penalty():
-            penalties = {0:0,1:1,5:2,10:3,15:4}
-            return -1*max([penalties[i] for i in penalties.keys() if kingdom.unrest >= i])
-        unrest_penalty = tk.Label(main_frame, text="Unrest Penalty: " + str(unrest_penalty()))
+        unrest_penalty = tk.Label(main_frame, text="Unrest Penalty: " + str(-1 * kingdom.get_unrest_penalty()))
         unrest_label.grid(row=0,column=0)
         unrest_penalty.grid(row=1,column=0)
         change_unrest = tk.Label(main_frame,text="Increase/reduce unrest by:")
@@ -455,6 +488,7 @@ def main(kingdom=Greenbelt):
             change = unrest_entry.get()
             kingdom.change_unrest(change)
             write_headline_stats()
+            update_skill_modifiers()
             draw_unrest_table()
         unrest_entry.bind("<Return>",unrest_listener)
         
@@ -492,119 +526,193 @@ def main(kingdom=Greenbelt):
     
     draw_ruins_table()
     
-    def draw_settlements_table():
+    def settlement_type(ob):
+        # Int -> String. Take settlement's level and number of occupied blocks, return its text classification        
+        settlement_types = {"Village":[1,1],"Town":[3,2],"City":[9,5],"Metropolis":[15,10]} 
+        level = kingdom.level
+        # {Settlement_type: [level threshold, occupied blocks threshold]}        
+        reference_level = 0
+        for i in settlement_types.keys():
+            level_threshold = settlement_types[i][0]
+            block_threshold = settlement_types[i][1]
+            if level >= level_threshold and ob >= block_threshold and level >= reference_level:
+                reference_level = level_threshold
+                classification = i
+        return classification
+    
+    def draw_buildings_and_settlements_tables():
+        # draw the Settlements table in the Settlements & Buildings tab
         settlements_frame = tk.Frame(settlements_tab,borderwidth=1,relief="groove")
         settlements_frame.grid(row=2,column=0,sticky="n")
-        ####################
-        header_frame=tk.Frame(settlements_frame)
-        header_frame.grid(row=0,column=0,columnspan=50)
-        header = tk.Label(header_frame,text="Settlements",font=("Segoe UI",10,"bold"))
+        master_frame = tk.Frame(settlements_tab,borderwidth=1,relief="groove")
+        master_frame.grid(row=2,column=2,sticky="n")
+        ####################        
+        header = tk.Label(settlements_frame,text="Settlements",font=("Segoe UI",10,"bold"))
         header.grid(row=0,column=0,columnspan=50)
         hsep1 = ttk.Separator(settlements_frame,orient="horizontal")
-        hsep1.grid(row=1,column=0,columnspan=50,sticky="ew")
-        #################################
-        name_label = tk.Label(settlements_frame,text="Name")
-        name_label.grid(row=2,column=0)
-        level_label = tk.Label(settlements_frame,text="Level",padx=2)
-        level_label.grid(row=2,column=1)
-        type_label = tk.Label(settlements_frame,text="Type",padx=2)
-        type_label.grid(row=2,column=2)        
-        residences_label = tk.Label(settlements_frame,text="Residences",padx=2)
-        residences_label.grid(row=2,column=3)
-        buildings_label = tk.Label(settlements_frame,text="Buildings",padx=2)
-        buildings_label.grid(row=2,column=4,columnspan=6)
-        hsep2 = ttk.Separator(settlements_frame,orient="horizontal")
-        hsep2.grid(row=3,column=0,columnspan=50,sticky="ew")
-        #####################################
-        settlement_row = 4
-        for settlement in kingdom.settlements:            
-            def settlement_type(occupied_blocks):
-                types = {1:"Village",4:"Town",9:"City",14:"Metropolis"}
-                key = min([i for i in types.keys() if occupied_blocks <= i])
-                return types[key]            
-            name = tk.Label(settlements_frame,text=settlement.name)
-            level = tk.Label(settlements_frame,text=settlement.level)
-            type_value = tk.Label(settlements_frame,text=settlement_type(settlement.occupied_blocks))
-            name.grid(row=settlement_row,column=0)
-            level.grid(row=settlement_row,column=1)
-            type_value.grid(row=settlement_row,column=2)
-            num_residences = tk.Label(settlements_frame,
-                                      text=str(sum([j for (i,j) in settlement.buildings.items() if i.residential])))
-            num_residences.grid(row=settlement_row,column=3)
-            buildings_frame = tk.Frame(settlements_frame)
-            buildings_frame.grid(row=settlement_row,column=4)
-            building_row = 0
-            for building in settlement.buildings:
+        hsep1.grid(row=1,column=0,columnspan=50,sticky="ew")        
+        #################################         
+        def add_building(settlement,building,number):
+            settlement.add_building(building)
+            draw_settlements_table()
+            settlement_buildings_table(settlement=settlement)
+            write_headline_stats()
+        def remove_building(settlement,building,number):
+            settlement.remove_building(building)
+            if building in settlement.buildings.keys():
+                number.set(settlement.buildings[building])
+            else: 
+                settlement_buildings_table(settlement=settlement)
+            draw_settlements_table()
+            settlement_buildings_table(settlement=settlement)
+            write_headline_stats()
+        def add_building_menu(choice,settlement):
+            # choice is a stringvar that should be reset to "Choose Building"
+            building = [i for i in Buildings if choice == i.name][0]
+            settlement.add_building(building)
+            settlement_buildings_table(settlement=settlement)
+            draw_settlements_table()
+            write_headline_stats()
+        def settlement_buildings_table(settlement=Noktown,parent_frame=master_frame):
+            # create the building search tool in the Buildings & Settlements tab
+            delete_frame_contents(parent_frame)
+            header_frame = tk.Frame(parent_frame)
+            header = tk.Label(header_frame,text=settlement.name + " buildings",font=("Segoe UI",10,"bold"))
+            header.grid(row=0,column=0)
+            header_frame.grid(row=0,column=0)        
+            buildings_frame = tk.Frame(parent_frame)
+            buildings_frame.grid(row=1,column=0)
+            add_building_label = tk.Label(buildings_frame, text = "Add Building:")
+            add_building_label.grid(row=0,column=0)
+            menu_var = tk.StringVar()
+            menu_var.set("Choose Building")
+            options = [i.name for i in Buildings]
+            (s,m) = (settlement, menu_var)
+            building_adder = tk.OptionMenu(buildings_frame,menu_var,*options,
+                                           command = lambda m=m,s=s: add_building_menu(m,s))
+            building_adder.grid(row=0,column=1,columnspan=3)
+            building_row = 1
+            for building in settlement.buildings:            
+                number = tk.IntVar(buildings_frame,value=settlement.buildings[building])
+                (s,b,n) = (settlement, building, number)
                 building_name = tk.Label(buildings_frame,text=building.name)
-                building_quantity = tk.Label(buildings_frame,text=str(settlement.buildings[building]))
+                building_quantity = tk.Label(buildings_frame,textvariable=number)
                 building_name.grid(row=building_row,column=0)
-                building_quantity.grid(row=building_row,column=1)
-                building_row += 1            
-            settlement_row += 1
-            hsep2 = ttk.Separator(settlements_frame,orient="horizontal")
-            hsep2.grid(row=settlement_row,column=0,columnspan=50,sticky="ew")
-            settlement_row += 1          
-                
-    draw_settlements_table()
+                building_quantity.grid(row=building_row,column=1,sticky="e")
+                add_building_button = tk.Button(buildings_frame, text="^",
+                                                command = lambda s=s,b=b,n=n: add_building(s,b,n))
+                remove_building_button = tk.Button(buildings_frame, text="v",
+                                                   command = lambda s=s,b=b,n=n: remove_building(s,b,n))
+                add_building_button.grid(row=building_row, column=2,sticky="e")
+                remove_building_button.grid(row=building_row, column=3,sticky="w")
+                building_row += 1
+        def draw_settlements_table(parent_frame=settlements_frame):
+            delete_frame_contents(parent_frame)
+            header = tk.Label(settlements_frame,text="Settlements",font=("Segoe UI",10,"bold"))
+            header.grid(row=0,column=0,columnspan=50)
+            hsep1 = ttk.Separator(settlements_frame,orient="horizontal")
+            hsep1.grid(row=1,column=0,columnspan=50,sticky="ew") 
+            settlement_row = 2
+            for settlement in kingdom.settlements:
+                name = tk.Label(parent_frame,text=settlement.name,font=("Segoe UI",10,"bold"))
+                name.grid(row=settlement_row,column=0,rowspan=2,padx=3)
+                ############################                
+                level_label = tk.Label(parent_frame,text="Level: " + str(settlement.get_level()))                
+                type_value = tk.Label(parent_frame,text="Type: " + settlement_type(ob=settlement.occupied_blocks))            
+                level_label.grid(row=settlement_row,column=1)
+                type_value.grid(row=settlement_row,column=2,padx=2)
+                num_residences = tk.Label(parent_frame,text= "Residences: " + 
+                                          str(sum([j for (i,j) in settlement.buildings.items() if i.residential])))
+                num_residences.grid(row=settlement_row+2,column=1,padx=2)
+                capital = tk.Label(parent_frame, text = "Capital? " + str(settlement == kingdom.capital))
+                capital.grid(row=settlement_row+1,column=1)
+                overcrowded = tk.Label(parent_frame,text="Overcrowded? " + str(settlement.is_overcrowded()))
+                overcrowded.grid(row=settlement_row+1,column=2)
+                view_buildings = tk.Button(parent_frame,text="View Buildings",
+                                           command = lambda s=settlement: settlement_buildings_table(s))
+                view_buildings.grid(row=settlement_row+2,column=0)
+                settlement_row += 4
+                hsep2 = ttk.Separator(parent_frame,orient="horizontal")
+                hsep2.grid(row=settlement_row,column=0,columnspan=50,sticky="ew")
+                settlement_row += 1
+        ##################################
+        draw_settlements_table()
+        settlement_buildings_table()
+            
+    draw_buildings_and_settlements_tables()
     
-    def building_finder():
+    def building_search_table():
+        # create the building search tool in the Buildings & Settlements tab
         master_frame = tk.Frame(settlements_tab,borderwidth=1,relief="groove")
-        master_frame.grid(row=2,column=2,sticky="n",padx=20)        
-        #########################
-        header_frame = tk.Frame(master_frame)        
-        header = tk.Label(header_frame,text="Buildings Search",font=("Segoe UI",10,"bold"))
-        header.grid(row=0,column=0,columnspan=500,sticky="nsew")
-        hsep0 = ttk.Separator(header_frame,orient="horizontal")
-        hsep0.grid(row=1,column=0,columnspan=500,sticky="ew")        
-        header_frame.grid(row=0,column=0,columnspan=500)
-        ####################
+        master_frame.grid(row=2,column=4,sticky="n",padx=20)        
+        ########### Frame Layout ##############
+        header_frame = tk.Frame(master_frame)                
+        header_frame.grid(row=0,column=0)
         search_frame = tk.Frame(master_frame)
         search_frame.grid(row=1,column=0)
+        buildings_frame = tk.Frame(master_frame,height=600)
+        buildings_frame.grid(row=2,column=0)
+        ############# Header Frame Content #######        
+        header = tk.Label(header_frame,text="Buildings Search",font=("Segoe UI",10,"bold"))
+        header.grid(row=0,column=0,sticky="nsew")
+        hsep0 = ttk.Separator(header_frame,orient="horizontal")
+        hsep0.grid(row=1,column=0,sticky="ew")        
+        #################################
+        #### Search Frame Content #######
+        #################################
         max_roll = tk.IntVar(search_frame,value=100)                        
         ekun_var = tk.IntVar(search_frame,value=0)
         residential_var = tk.IntVar(search_frame,value=0)
         unrest_var = tk.IntVar(search_frame,value=0)
         ruins_var = tk.IntVar(search_frame,value=0)
         consumption_var = tk.IntVar(search_frame,value=0)
+        proficiency_var= tk.IntVar(search_frame,value=0)
+        level_var = tk.IntVar(search_frame,value=0)
         ##########################
         def refresher():
             # generate a list of buildings satisfying the criteria specified using the checkboxes and dice roll field            
             buildings_list = building_picker(max_roll=max_roll.get(), require_unrest=unrest_var.get(),
                                              require_consumption=consumption_var.get(),
                                              require_residential=residential_var.get(),
-                                             require_ruins=ruins_var.get(), Ekun_modifier=ekun_var.get())
+                                             require_ruins=ruins_var.get(), Ekun_modifier=ekun_var.get(),
+                                             require_proficiency=proficiency_var.get(), require_level=level_var.get())
             draw_buildings_list(buildings_list)
         #####################
-        ekun_checkbox = tk.Checkbutton(search_frame,text="Apply Ekundayo's DC modifier ",
-                                       variable=ekun_var,onvalue=1,offvalue=0,
-                                       command=lambda:refresher())
-        ekun_checkbox.grid(row=0,column=0)
+        ekun_checkbox = tk.Checkbutton(search_frame,text="Apply Ekundayo's DC modifier",
+                                       variable=ekun_var,onvalue=1,offvalue=0,command=lambda:refresher())
+        ekun_checkbox.grid(row=0,column=0)        
+        prof_checkbox = tk.Checkbutton(search_frame,text="Check kingdom proficiency",variable=proficiency_var,
+                                       onvalue=1,offvalue=0,command=lambda:refresher())
+        prof_checkbox.grid(row=0,column=1)
+        level_checkbox = tk.Checkbutton(search_frame,text="Check kingdom level",variable=level_var,
+                                       onvalue=1,offvalue=0,command=lambda:refresher())
+        level_checkbox.grid(row=0,column=2)
         residential_checkbox = tk.Checkbutton(search_frame,text="Only show residential buildings",
-                                       variable=residential_var,onvalue=1,offvalue=0,
-                                       command=lambda:refresher())
-        residential_checkbox.grid(row=0,column=1)
-        unrest_checkbox = tk.Checkbutton(search_frame,text="Only show buildings that affect Unrest",
-                                       variable=unrest_var,onvalue=1,offvalue=0,
-                                       command=lambda:refresher())
-        unrest_checkbox.grid(row=1,column=0,padx=5)
-        consumption_checkbox = tk.Checkbutton(search_frame,text="Only show buildings that affect Consumption",
-                                              variable=consumption_var,onvalue=1,offvalue=0,
+                                              variable=residential_var,onvalue=1,offvalue=0,
                                               command=lambda:refresher())
-        consumption_checkbox.grid(row=1,column=1,padx=5)
-        ruins_checkbox = tk.Checkbutton(search_frame,text="Only show buildings that affect Ruins",
-                                              variable=ruins_var,onvalue=1,offvalue=0,
+        residential_checkbox.grid(row=1,column=0)
+        lede = tk.Label(search_frame,text="Only show buildings that affect:")
+        lede.grid(row=1,column=1,sticky="w")
+        unrest_checkbox = tk.Checkbutton(search_frame,text="Unrest",variable=unrest_var,onvalue=1,offvalue=0,
+                                         command=lambda:refresher())
+        unrest_checkbox.grid(row=1,column=2)
+        consumption_checkbox = tk.Checkbutton(search_frame,text="Consumption",variable=consumption_var,onvalue=1,
+                                              offvalue=0,command=lambda:refresher())
+        consumption_checkbox.grid(row=1,column=3)
+        ruins_checkbox = tk.Checkbutton(search_frame,text="Ruins",variable=ruins_var,onvalue=1,offvalue=0,
                                               command=lambda:refresher())
-        ruins_checkbox.grid(row=1,column=2,columnspan=2,padx=5)
+        ruins_checkbox.grid(row=1,column=4)
         roll_to_build = tk.Label(search_frame,text="Max roll needed to build:")
-        roll_to_build.grid(row=0,column=2,sticky="e")        
+        roll_to_build.grid(row=0,column=3,sticky="e")        
         roll_entry = tk.Entry(search_frame,textvariable=max_roll,width=3)
-        roll_entry.grid(row=0,column=3,sticky="w")
+        roll_entry.grid(row=0,column=4,sticky="w")
         def roll_listener(event=None):
+            # redraw building list when user enters a new minimum roll value and presses Return
             refresher()
         roll_entry.bind("<Return>",roll_listener)
-        ####################
-        buildings_frame = tk.Frame(master_frame,height=600)
-        buildings_frame.grid(row=2,column=0)
+        ###############################
+        ### Buildings Frame Content ###
+        ###############################
         buildings_header = tk.Frame(buildings_frame,width=850)
         buildings_header.grid(row=0,column=0)
         buildings_canvas = tk.Canvas(buildings_frame,width=850,height=500)        
@@ -613,65 +721,61 @@ def main(kingdom=Greenbelt):
         vscroll.grid(row=1,column=1,rowspan=500,sticky="ns")
         buildings_canvas.configure(yscrollcommand=vscroll.set)
         buildings_canvas.bind("<Configure>", 
-                              lambda e: buildings_canvas.configure(scrollregion = buildings_canvas.bbox("all")))
-        #############################
-        # parameters to force alignment of the columns in the header frame and scrollable buildings list
+                              lambda e: buildings_canvas.configure(scrollregion = buildings_canvas.bbox("all")))        
+        # parameters to force alignment of the columns in the search header frame and scrollable buildings list
         name_width = 17
         skill_width = 10
+        prof_width = 10
         dc_width = 5
+        level_width = 5
         lots_width = 5 
         rp_width = 7
         materials_width = 10
-        residential_width = 8 
-        unrest_width = 8 
-        ruins_width = 10
-        consumption_width = 14
-        description_width = 20
-        ###########################
-        ## generate the header frame's content
+        description_width = 48        
+        ## generate the search header frame's content
         hsep1=ttk.Separator(buildings_header,orient="horizontal")
         hsep1.grid(row=0,column=0,columnspan=50,sticky="ew")   
         building_name = tk.Label(buildings_header,text="Name",width=name_width)
         building_name.grid(row=1,column=0,sticky="ew")
         building_skill = tk.Label(buildings_header,text="Skill",width=skill_width)
         building_skill.grid(row=1,column=1,sticky="ew")
+        proficiency = tk.Label(buildings_header,text="Proficiency",width=prof_width)
+        proficiency.grid(row=1,column=2,sticky="ew")
         building_DC = tk.Label(buildings_header,text="DC",width=dc_width)
-        building_DC.grid(row=1,column=2,sticky="ew")
+        building_DC.grid(row=1,column=3,sticky="ew")
+        level = tk.Label(buildings_header,text="Level",width=level_width)
+        level.grid(row=1,column=4,sticky="ew")
         lots_label = tk.Label(buildings_header,text="Lots",width=lots_width)
-        lots_label.grid(row=1,column=3,sticky="ew")
+        lots_label.grid(row=1,column=5,sticky="ew")
         RP_label = tk.Label(buildings_header,text="RP Cost",width=rp_width)
-        RP_label.grid(row=1,column=4,sticky="ew")
+        RP_label.grid(row=1,column=6,sticky="ew")
         materials_label = tk.Label(buildings_header,text="Material \n Cost",width=materials_width)
-        materials_label.grid(row=1,column=5,sticky="ew")
-        residence_label = tk.Label(buildings_header,text="Residential?",width=residential_width)
-        residence_label.grid(row=1,column=6,sticky="ew")
-        affects_unrest = tk.Label(buildings_header,text="Affects \n Unrest?",width=unrest_width)
-        affects_unrest.grid(row=1,column=7,sticky="ew")
-        affects_ruins = tk.Label(buildings_header,text="Affects \n Ruins?",width=ruins_width)
-        affects_ruins.grid(row=1,column=8,sticky="ew")
-        affects_consumption = tk.Label(buildings_header,text="Affects \n Consumption?",width=consumption_width)
-        affects_consumption.grid(row=1,column=9,sticky="ew")
+        materials_label.grid(row=1,column=7,sticky="ew")
         description = tk.Label(buildings_header,text="Description",width=description_width)
-        description.grid(row=1,column=10,sticky="ew")
+        description.grid(row=1,column=8,columnspan=3,sticky="ew")
         hsep2=ttk.Separator(buildings_header,orient="horizontal")
         hsep2.grid(row=2,column=0,columnspan=50,sticky="ew")        
         ###############                
-        def building_picker(max_roll=10,require_unrest=False,require_consumption=False,
-                            require_residential=False,require_ruins=False,Ekun_modifier=False):
+        def building_picker(max_roll=10,require_unrest=False,require_consumption=False,require_proficiency=False,
+                            require_residential=False,require_ruins=False,Ekun_modifier=False,require_level=False):
             # generates a list of buildings satisfying the criteria specified in search_frame
             outlist = []  
             for building in Buildings:
                 Ekun_modifier = 2 * Ekun_modifier * (building.lumber != 0)
                 if building.skill.lower() in Kingdom_skills:
                     modifier = kingdom.get_modifier(building.skill.lower())
-                    roll_satisfied = (max_roll + modifier) >= (building.DC - Ekun_modifier)
-                else: roll_satisfied = False                
-                unrest_satisfied = (not require_unrest) or (building.unrest != 0)
-                consumption_satisfied = (not require_consumption) or building.consumption
-                residential_satisfied = (not require_residential) or building.residential
+                    proficiency = kingdom.skills[building.skill.lower()]
+                    dc_check = (max_roll + modifier) >= (building.DC - Ekun_modifier) 
+                    proficiency_check = (not require_proficiency) or proficiency >= building.proficiency
+                    roll_check = dc_check and proficiency_check
+                else: roll_check, proficiency_check = False, True
+                unrest_check = (not require_unrest) or (building.unrest != 0)
+                consumption_check = (not require_consumption) or building.consumption
+                residential_check = (not require_residential) or building.residential
                 ruin = building.ruin + building.corruption + building.crime + building.decay + building.strife
-                ruin_satisfied = (not require_ruins) or (ruin != 0)
-                if roll_satisfied and unrest_satisfied and consumption_satisfied and residential_satisfied and ruin_satisfied:
+                ruin_check = (not require_ruins) or (ruin != 0)
+                level_check = (not require_level) or kingdom.level >= building.level
+                if roll_check and unrest_check and consumption_check and residential_check and ruin_check and level_check:
                     outlist.append(building)
             return outlist
         #########################
@@ -686,14 +790,18 @@ def main(kingdom=Greenbelt):
                 name.grid(row=buildings_row,column=0)
                 skill = tk.Label(inner_frame,text=building.skill,width=skill_width)
                 skill.grid(row=buildings_row, column=1)
+                prof = tk.Label(inner_frame,text=prof_dict[building.proficiency],width=prof_width)
+                prof.grid(row=buildings_row,column=2)
                 dc = tk.Label(inner_frame,text=building.DC,width=dc_width)
-                dc.grid(row=buildings_row,column=2)
+                dc.grid(row=buildings_row,column=3)
+                level = tk.Label(inner_frame,text=building.level,width=level_width)
+                level.grid(row=buildings_row, column=4)
                 lots = tk.Label(inner_frame,text=building.lots,width=lots_width)
-                lots.grid(row=buildings_row,column=3)
+                lots.grid(row=buildings_row,column=5)
                 rp = tk.Label(inner_frame,text=building.RP,width=rp_width)
-                rp.grid(row=buildings_row,column=4)
+                rp.grid(row=buildings_row,column=6)
                 materials = tk.Frame(inner_frame,width=materials_width)
-                materials.grid(row=buildings_row,column=5)
+                materials.grid(row=buildings_row,column=7)
                 lumber = tk.Label(materials,text="Lumber: " + str(building.lumber))
                 lumber.grid(row=0,column=0)
                 stone = tk.Label(materials,text="Stone: " + str(building.stone))
@@ -702,22 +810,13 @@ def main(kingdom=Greenbelt):
                 ore.grid(row=2,column=0)
                 luxuries = tk.Label(materials,text="Luxuries: " + str(building.luxuries))
                 luxuries.grid(row=3,column=0)
-                residential = tk.Label(inner_frame,text=str(building.residential),width=residential_width)
-                residential.grid(row=buildings_row,column=6)
-                unrest = tk.Label(inner_frame,text=str(building.unrest),width=unrest_width)
-                unrest.grid(row=buildings_row,column=7)
-                ruins = tk.Label(inner_frame,text=str((building.ruin + building.corruption + building.crime + 
-                                          building.decay + building.strife) != 0),width=ruins_width)
-                ruins.grid(row=buildings_row,column=8)
-                consumption = tk.Label(inner_frame,text=str(building.consumption),width=consumption_width)
-                consumption.grid(row=buildings_row,column=9)
                 description = tk.Label(inner_frame,text="Lorem ipsum dolor...",width=description_width)
-                description.grid(row=buildings_row,column=10)
+                description.grid(row=buildings_row,column=8,columnspan=3)
                 buildings_row += 1
                 hsep3=ttk.Separator(inner_frame,orient="horizontal")
                 hsep3.grid(row=buildings_row,column=0,columnspan=50,sticky="ew")
                 buildings_row += 1
         draw_buildings_list(building_picker(max_roll=100))
-    building_finder()
+    building_search_table()
     
     w1.mainloop()

@@ -10,7 +10,7 @@ from constants import *
 
 class Kingdom:
     def __init__(self, name, claimed_hexes, level, unrest, ruins, settlements, attributes, skills, advisors, relations,
-                 RP, resources,xp):
+                 RP, resources,xp,work_camps,capital):
         self.name = name  # String, Kingdom name
         self.claimed_hexes = claimed_hexes  # List of tuples (x,y) specifying coordinates of claimed hexes
         self.level = level  # Int, kingdom level
@@ -26,6 +26,8 @@ class Kingdom:
         self.resources = resources  # Dict {"resource name":[stored amount, storage capacity, gain next turn]}
         # resources are Food, Lumber, Stone, Ore, and Luxuries
         self.xp = xp # Int, current XP
+        self.work_camps = work_camps # Dict, {work camp object:[list of hex coordinates]}
+        self.capital = capital # Settlement object, identity of Kingdom's capital
 
     def update_control_DC(self):
         self.control_DC = control_DC_table[self.level] + self.get_size()
@@ -41,6 +43,10 @@ class Kingdom:
             self.update_control_DC()
         else:
             print("Kingdom level cannot exceed 20!")
+
+    def get_unrest_penalty(self):
+        penalties = {0:0,1:1,5:2,10:3,15:4}
+        return max([penalties[i] for i in penalties.keys() if self.unrest >= i])
 
     def reduce_level(self):
         if self.level > 1:
@@ -120,6 +126,7 @@ class Kingdom:
             print("You tried to remove a hex that didn't belong to the kingdom to begin with.")
 
     def get_size(self):
+        # returns the control DC modifier for the kingdom based on its number of claimed hexes
         num_hexes = len(self.claimed_hexes)
         if num_hexes == 0:
             return 0        
@@ -129,15 +136,15 @@ class Kingdom:
     def get_modifier(self, skill):
         # String -> Int, get the modifier (attribute + proficiency + building item + ruler circumstance) for the named skill
         skill_attribute = Kingdom_skills[skill]  # find the attribute corresponding to the named skill
-        leadership_bonus_size = max(
-            {leadership_status_bonuses[i] for i in leadership_status_bonuses.keys() if i < self.level})
+        leadership_bonus = max(
+            {leadership_status_bonuses[i] for i in leadership_status_bonuses.keys() if i <= self.level})
         relevant_advisors = {i: j for (i, j) in Advisors.items() if Advisors[i] == skill_attribute}
         relevant_role_filled = True in [self.advisors[i] == "filled" for i in relevant_advisors.keys()]
         level_multiplier = self.level * (self.get_skill(skill) != 0)  # Int * Bool
         proficiency_bonus = 2 * self.get_skill(skill)
         attribute_bonus = (self.get_attribute(Kingdom_skills[skill]) - 10) // 2
-        leadership_bonus = leadership_bonus_size * relevant_role_filled  # Int * Bool        
-        return level_multiplier + proficiency_bonus + attribute_bonus + leadership_bonus
+        leadership_bonus = leadership_bonus * relevant_role_filled  # Int * Bool
+        return level_multiplier + proficiency_bonus + attribute_bonus + leadership_bonus - self.get_unrest_penalty()
 
     def skill_check(self, skill):
         # string -> Int, roll a check against the named skill
@@ -184,10 +191,9 @@ class Kingdom:
     
 
 class Settlement:
-    def __init__(self, name, location, level, buildings):
+    def __init__(self, name, location, buildings):
         self.name = name  # String, settlement name
-        self.location = location  # tuple (Int, Int) of grid coordinates specifying settlement's location
-        self.level = level  # Int, settlement level
+        self.location = location  # tuple (Int, Int) of grid coordinates specifying settlement's location        
         self.buildings = buildings  # dictionary {Building:Int} of Building objects and number in settlement
         self.occupied_lots = sum(buildings[i] * i.lots for i in buildings)  # Int, number of lots occupied
         self.occupied_blocks = (self.occupied_lots // 4) + (self.occupied_lots % 4 > 0)  # number of blocks occupied
@@ -195,6 +201,15 @@ class Settlement:
     def add_building(self, new_building):
         self.buildings[new_building] = self.buildings.get(new_building, 0) + 1
         self.occupied_lots += new_building.lots
+        self.occupied_blocks = (self.occupied_lots // 4) + (self.occupied_lots % 4 > 0)
+        
+    def remove_building(self,building):
+        if building not in self.buildings:
+           print("Something has gone badly wrong here!") 
+        elif self.buildings[building] <= 1:
+            del self.buildings[building]
+        else: self.buildings[building] -= 1
+        self.occupied_lots -= building.lots
         self.occupied_blocks = (self.occupied_lots // 4) + (self.occupied_lots % 4 > 0)
 
     def destroy_building(self, building):
@@ -226,7 +241,8 @@ class Settlement:
         # self -> Int, return settlement's per-turn food consumption
         a = settlement_consumption_scaling  # renaming for convenience!
         consumption_reducers = {i: j for (i, j) in self.buildings.items() if i.consumption}
-        return min([a[i] for i in a.keys() if a[i] >= self.occupied_blocks]) - sum(consumption_reducers.values())
+        base_consumption = max([i for (i,j) in a.items() if j <= self.occupied_blocks]) 
+        return max(0, base_consumption - sum(consumption_reducers.values()))
 
     def is_overcrowded(self):
         # self -> Bool, check if settlement has at least as many residential buildings as occupied blocks
@@ -234,6 +250,9 @@ class Settlement:
                       i.residential}  # types & numbers of residential buildings in settlement
         total_residences = sum(residences.values())  # total no. residential buildings in settlement
         return total_residences < self.occupied_blocks
+    
+    def get_level(self):
+        return self.occupied_blocks
 
 
 class Building:
