@@ -125,17 +125,17 @@ def create_canvas(state):
     state.set_worldmap(worldmap)
     state.map_canvas.create_image(0, 0, anchor="nw", image=app_state.worldmap)
     
-    def lclick(event=None,state=app_state):
+    def lclick(event=None,state=state):
         (x,y) = (event.x,event.y)
         left_click_add_hex(x,y,state)
         state.write_headline_stats()
         
-    def mclick(event=None,state=app_state):
+    def mclick(event=None,state=state):
         (x,y) = (event.x,event.y)
         middle_click_remove_hex(x,y,state)
         state.write_headline_stats()
         
-    def rclick(event=None,state=app_state):
+    def rclick(event=None,state=state):
         (x,y) = (event.x_root,event.y_root)
         right_click_menu(x,y,state)
     
