@@ -268,9 +268,9 @@ def draw_unrest_table(state):
     def unrest_listener(event=None): # both this and kingdom.increase(xp) need lots of input sanitization!
         change = unrest_entry.get()
         kingdom.change_unrest(change)
-        write_headline_stats()
-        update_skill_modifiers()
-        draw_unrest_table()
+        state.write_headline_stats()
+        state.update_stringvars()
+        draw_unrest_table(state)
     unrest_entry.bind("<Return>",unrest_listener)
     
 def draw_ruins_table(state):
