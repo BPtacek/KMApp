@@ -35,6 +35,9 @@ control_DC_table = {1: 14, 2: 15, 3: 16, 4: 18, 5: 20, 6: 22, 7: 23, 8: 24, 9: 2
 leadership_status_bonuses = {1: 1, 8: 2,
                              16: 3}  # kingdom level and associated status bonus to skill checks for filling leadership
 settlement_consumption_scaling = {1:1,2:2,4:5,6:10}  # {settlement size threshold : settlement consumption value}.
+attributes = ["loyalty","stability","culture","economy"]
+prof_dict = {0:"Untrained",1:"Trained",2:"Expert",3:"Master",4:"Legendary"}
+resources = ["lumber","stone","ore","luxuries"]
 
 
 # Settlment size is defined in numbers of filled blocks; each block has 4 lots.

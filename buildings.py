@@ -129,7 +129,7 @@ Lizards = Settlement("Isle of the \n Lizard King", (909.3266739736605, 363.0),
                      {Houses: 1, Mill: 1, Shrine: 1,Bridge:1,Barracks:1,Monument:1})
 Tatzlford = Settlement("Tatzlford", (883.3459118601273, 228.0),
                        {Houses: 1, TownHall: 1, Inn: 1, Orphanage: 1, Barracks: 1,Mill:1})
-Greenbelt = Kingdom("Greenbelt Republic", [(909.3266739736605, 273.0), (935.3074360871937, 228.0),
+Greenbelt = Kingdom(name="Greenbelt Republic", claimed_hexes=[(909.3266739736605, 273.0), (935.3074360871937, 228.0),
                                            (883.3459118601273, 228.0), (961.2881982007268, 273.0),
                                            (935.3074360871937, 318.0), (909.3266739736605, 363.0),
                                            (1013.2497224277931, 273.0), (987.26896031426, 228.0),
@@ -139,11 +139,19 @@ Greenbelt = Kingdom("Greenbelt Republic", [(909.3266739736605, 273.0), (935.3074
                                            (961.2881982007268, 183.0), (935.3074360871937, 138.0),
                                            (1039.2304845413264, 138.0), (1013.2497224277931, 93.0),
                                            (1065.2112466548595, 93.0)],
-                    5, 0, {"corruption": 1,"crime":0,"decay":0,"strife":2}, [Noktown, Lizards, Tatzlford],
-                    {"culture": 14, "economy": 16, "loyalty": 14, "stability": 14},
-                    {'agriculture': 0,'arts': 1,'boating': 0,'defense': 1,'engineering': 1,'exploration': 0,
+                    level=5, unrest=0, ruins={"corruption": 1,"crime":0,"decay":0,"strife":2}, 
+                    settlements=[Noktown, Lizards, Tatzlford], 
+                    attributes={"culture": 14, "economy": 16, "loyalty": 14, "stability": 14},
+                    skills={'agriculture': 0,'arts': 1,'boating': 0,'defense': 1,'engineering': 1,'exploration': 0,
                      'folklore': 0,'industry': 1,'intrigue': 0,'magic': 1,'politics': 1,'scholarship': 0,
                      'statecraft': 1,'trade': 1,'warfare': 1,'wilderness': 0},
-                    {i: "filled" for i in Advisors.keys()}, {}, [30, 6, 13],
-                    {"food": [2, 8, 2],"lumber":[1,8,2],"stone":[6,8,1],"ore":[2,8,1],"luxuries":[1,0,0]},72,
-                    {"Mines":[],"Logging Camps":[],"Farms":[],"Quarries":[]},Noktown)
+                    advisors={i: "filled" for i in Advisors.keys()}, relations={}, RP=[30, 6, 13],
+                    resources={"food": [2, 8, 2],"lumber":[1,8,2],"stone":[6,8,1],"ore":[2,8,1],"luxuries":[1,0,0]},
+                    xp=72,work_camps={"Mines":[],"Logging Camps":[],"Farms":[],"Quarries":[]},capital="Noktown")
+
+Blank = Kingdom(name="Unnamed Kingdom")
+
+# ,[],1,0,{i:0 for i in Ruins},[],{i:10 for i in Kingdom_skills.values()},
+#                 {i:0 for i in Kingdom_skills.keys()},{i: "filled" for i in Advisors.keys()},{},[0,4,9],
+#                 {"food":[0,0,0],"lumber":[0,0,0],"stone":[0,0,0],"ore":[0,0,0],"luxuries":[0,0,0]},0,
+#                 {"Mines":[],"Logging Camps":[],"Farms":[],"Quarries":[]},"")

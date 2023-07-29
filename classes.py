@@ -4,13 +4,17 @@ Created on Sat Jul 15 20:40:22 2023
 
 @author: dtbla
 """
-
+import tkinter as tk
+from tkinter import ttk
 from constants import *
 
 
 class Kingdom:
-    def __init__(self, name, claimed_hexes, level, unrest, ruins, settlements, attributes, skills, advisors, relations,
-                 RP, resources,xp,work_camps,capital):
+    def __init__(self, name="", claimed_hexes=[], level=1, unrest=0, ruins={i:0 for i in Ruins}, 
+                 settlements = [], attributes = {i:10 for i in Kingdom_skills.values()}, 
+                 skills={i:0 for i in Kingdom_skills.keys()}, advisors={i:"filled" for i in Advisors.keys()}, 
+                 relations={},RP=[0,0,0],xp=0,work_camps={},capital="",
+                 resources={"food":[0,0,0],"lumber":[0,0,0],"ore":[0,0,0],"stone":[0,0,0],"luxuries":[0,0,0]}):
         self.name = name  # String, Kingdom name
         self.claimed_hexes = claimed_hexes  # List of tuples (x,y) specifying coordinates of claimed hexes
         self.level = level  # Int, kingdom level
@@ -27,7 +31,72 @@ class Kingdom:
         # resources are Food, Lumber, Stone, Ore, and Luxuries
         self.xp = xp # Int, current XP
         self.work_camps = work_camps # Dict, {work camp object:[list of hex coordinates]}
-        self.capital = capital # Settlement object, identity of Kingdom's capital
+        self.capital = capital # String, identity of Kingdom's capital
+        
+    def set_name(self,name):
+        self.name = name
+        
+    def set_attributes(self,attributes):
+        self.attributes = attributes
+        
+    def set_skills(self,skills):
+        self.skills = skills
+        
+    def set_unrest(self,unrest):
+        self.unrest=unrest
+        
+    def set_ruins(self,ruins):
+        self.ruins = ruins
+        
+    def set_settlements(self,settlements):
+        self.settlements = settlements
+    
+    def set_RP(self,rp):
+        self.RP=rp
+        
+    def set_advisors(self,advisors):
+        self.advisors = advisors
+    
+    def set_xp(self,xp):
+        self.xp = xp
+        
+    def set_resources(self,resources):
+        self.resources = resources
+        
+    def set_capital(self,capital):
+        if self.settlements != []:
+            settlement_names = [i.name for i in self.settlements]
+            if capital in settlement_names:
+                self.capital=capital
+                
+    def set_work_camps(self,work_camps):
+        self.work_camps = work_camps
+        
+    def set_level(self,level):
+        self.level = level
+        
+    def set_relations(self,relations):
+        self.relations = relations
+    
+    def add_settlement(self,name,location,buildings):
+        s = Settlement(name,location,buildings)
+        self.settlements.append(s)
+    
+    def reset(self):
+        self.claimed_hexes = []
+        self.settlements = []
+        self.level = 1
+        self.update_control_DC()
+        self.skills = {i:0 for i in Kingdom_skills.keys()}
+        self.attributes = {i:10 for i in Kingdom_skills.values()}
+        self.ruins = {i:0 for i in Ruins}
+        self.xp = 0
+        self.RP = [0,4,9]
+        self.work_camps = {"farms":0,"lumber camps":0,"mines":0,"quarries":0}        
+        self.name = ""
+        self.resources = {"food":[0,0,0],"lumber":[0,0,0],"stone":[0,0,0],"ore":[0,0,0],"luxuries":[0,0,0]}
+        self.capital = None
+        
 
     def update_control_DC(self):
         self.control_DC = control_DC_table[self.level] + self.get_size()
@@ -112,6 +181,7 @@ class Kingdom:
             self.unrest += change
 
     def add_hex(self, coordinates):
+        # coordinates is a tuple, (x,y)
         if coordinates not in self.claimed_hexes:
             self.claimed_hexes.append(coordinates)
             self.update_control_DC()
@@ -130,8 +200,8 @@ class Kingdom:
         num_hexes = len(self.claimed_hexes)
         if num_hexes == 0:
             return 0        
-        else:
-            return max([j["dc modifier"] for (i, j) in size_thresholds.items() if i < num_hexes])
+        elif [j["dc modifier"] for (i, j) in size_thresholds.items() if i < num_hexes] == []: return 0
+        else: return max([j["dc modifier"] for (i, j) in size_thresholds.items() if i < num_hexes])
 
     def get_modifier(self, skill):
         # String -> Int, get the modifier (attribute + proficiency + building item + ruler circumstance) for the named skill
@@ -171,15 +241,15 @@ class Kingdom:
         if xp + self.xp > 1000:
             self.xp = self.xp + xp - 1000
             self.increase_level()
-        else: self.xp += xp        
+        else: self.xp += xp
 
     def export_kingdom_data(self):
         # export kingdom data in JSON format as dictionary
-        data = self.__dict__
+        data = self.__dict__.copy()
         kingdom_settlements = []
         tmp = {}
         for settlement in data["settlements"]:
-            readable_settlement = settlement.__dict__
+            readable_settlement = settlement.__dict__.copy()
             if readable_settlement.get("buildings", False):
                 for building in readable_settlement.get("buildings"):
                     tmp[building.name] = readable_settlement.get("buildings").get(building)
@@ -241,19 +311,18 @@ class Settlement:
         # self -> Int, return settlement's per-turn food consumption
         a = settlement_consumption_scaling  # renaming for convenience!
         consumption_reducers = {i: j for (i, j) in self.buildings.items() if i.consumption}
-        base_consumption = max([i for (i,j) in a.items() if j <= self.occupied_blocks]) 
+        if [i for (i,j) in a.items() if j <= self.occupied_blocks] == []: base_consumption = 0
+        else: base_consumption = max([i for (i,j) in a.items() if j <= self.occupied_blocks]) 
         return max(0, base_consumption - sum(consumption_reducers.values()))
 
     def is_overcrowded(self):
-        # self -> Bool, check if settlement has at least as many residential buildings as occupied blocks
-        residences = {i: j for (i, j) in self.buildings.items() if
-                      i.residential}  # types & numbers of residential buildings in settlement
+        # self -> Bool, return False if settlement has fewer residences than occupied blocks
+        residences = {i: j for (i, j) in self.buildings.items() if i.residential}
         total_residences = sum(residences.values())  # total no. residential buildings in settlement
         return total_residences < self.occupied_blocks
     
     def get_level(self):
         return self.occupied_blocks
-
 
 class Building:
     def __init__(self, name, lots, level, cost, difficulty, unrest, ruins, consumption, residential,
@@ -287,3 +356,122 @@ class Building:
         self.residential = residential
         self.kingdom_item = kingdom_item  # Item bonuses to Kingdom skill checks conferred by building
         self.PC_item = PC_item  # Item bonuses to PC skill checks conferred by building
+
+class State:
+    def __init__(self,kingdom,attribute_variables={},skill_modifiers={},proficiency_variables={},ruin_variables={},
+                 hex_center_list = [],hex_angle=60,hexagon_side_length=30,tabs=[],headline_frames={},table_frames={},
+                 kname=None):
+        self.kingdom = kingdom
+        self.attribute_variables = attribute_variables
+        self.skill_modifiers = skill_modifiers
+        self.proficiency_variables = proficiency_variables
+        self.ruin_variables = ruin_variables
+        self.hex_center_list = hex_center_list
+        self.hex_angle = hex_angle
+        self.hexagon_side_length = hexagon_side_length
+        self.grid_vertical_offset = -1.4 * hexagon_side_length  # used to adjust grid position so it matches in-game map
+        self.tabs = tabs # list of tk.Frame objects housinng the tabs
+        self.headline_frames = headline_frames # dict of tk.Frame objects housing the headline stats at the top of each tab
+        self.table_frames = table_frames # dict of tk.Frame objects housing gui tables
+        self.kname = kname # StringVar representing kingdom name
+        
+    def update_stringvars(self):
+        for (i,j) in self.attribute_variables.items():
+            j.set(self.kingdom.get_attribute(i))        
+        for (i,j) in self.skill_modifiers.items():
+            j.set(self.kingdom.get_modifier(i))
+        for (i,j) in self.ruin_variables.items():
+            j.set(self.kingdom.ruins[i])
+        for (i,j) in self.proficiency_variables.items():
+            proficiency = prof_dict[self.kingdom.get_skill(i)]
+            j.set(proficiency)
+    
+    def add_to_hex_center_list(self,coords):
+        # coords is a tuple (x,y)
+        self.hex_center_list.append(coords)
+        
+    def set_map_canvas(self,canvas):
+        self.map_canvas = canvas
+        
+    def set_worldmap(self,image):
+        self.worldmap = image
+        
+    def set_tabs(self,tabs):
+        self.tabs = tabs
+    
+    def set_main_header(self,frame):
+        self.main_header = frame
+        
+    def assign_headline_frames(self,frames):
+        self.headline_frames = frames
+        
+    def delete_frame_contents(self,frame):
+        # delete all widgets inside a frame while preserving the frame itself
+        for widget in frame.winfo_children():
+            widget.destroy()
+            
+    def add_table_frame(self,name,frame):
+        # Add the identifier of a frame to the state object so it can be cleared/destroyed later if needed
+        self.table_frames[name] = frame
+    
+    def clear_all_tabs(self):
+        for tab in self.tabs[1:]:
+            self.delete_frame_contents(tab)
+            
+    def destroy_table_frame(self, frame):
+        if frame in self.table_frames.keys():
+            self.table_frames[frame].destroy()
+        else: print("Frame " + frame + " was designated for destruction but could not be destroyed.")
+    
+    def set_name_stringvar(self,name):
+        self.kname = name
+    
+    def write_headline_stats(self):
+        kingdom = self.kingdom
+        tabs = self.tabs
+        headline_frames = self.headline_frames
+        index = 0
+        for tab in tabs:
+            self.delete_frame_contents(headline_frames[index])
+            level_label = tk.Label(headline_frames[index], text="Level: " + str(kingdom.level)) 
+            level_label.grid(row=1, column=0)
+            control_label = tk.Label(headline_frames[index], text="Control DC: " + str(kingdom.control_DC))
+            control_label.grid(row=1, column=1,padx=10)            
+            hexes_label = tk.Label(headline_frames[index], text="Claimed Hexes: " + str(len(kingdom.claimed_hexes))) 
+            hexes_label.grid(row=1, column=2,padx=10)
+            vsep1 = ttk.Separator(headline_frames[index],orient="vertical")
+            vsep1.grid(row=1,column=3,sticky="nsew")
+            ########################
+            food_label = tk.Label(headline_frames[index], text="Food: " + str(kingdom.resources["food"][0]))
+            food_label.grid(row=1, column=4, padx=10)
+            food_capacity_label = tk.Label(headline_frames[index], text="Food Consumed/Turn: " + 
+                                           str(kingdom.get_consumption()))
+            food_capacity_label.grid(row=1, column=5, padx=10)
+            food_turn_label = tk.Label(headline_frames[index], text="Food Gained/Turn: " + 
+                                       str(kingdom.resources["food"][2]))
+            food_turn_label.grid(row=1, column=6, padx=10)
+            vsep2 = ttk.Separator(headline_frames[index],orient="vertical")
+            vsep2.grid(row=1,column=7,sticky="nsew")
+            ##############################
+            resource_dice_label = tk.Label(headline_frames[index], text = "Base Resource Dice: " + 
+                                           kingdom.get_base_resource_die_string())
+            resource_dice_label.grid(row=1, column=8, padx=10)            
+            resource_col = 9
+            for resource in resources:
+                resource_label = tk.Label(headline_frames[index],
+                                          text=resource.title() + ": " + str(kingdom.resources[resource][0]))
+                resource_label.grid(row=1,column=resource_col,padx=10)
+                resource_col += 1
+            vsep3 = ttk.Separator(headline_frames[index],orient="vertical")
+            vsep3.grid(row=1,column=13,sticky="nsew")
+            ########################
+            unrest_label = tk.Label(headline_frames[index], text="Unrest: " + str(kingdom.unrest))
+            unrest_label.grid(row=1, column=14, padx=10)            
+            ruin_startcol=15
+            for ruin in Ruins:
+                ruin_label = tk.Label(headline_frames[index],text = ruin.title() + ": " + str(kingdom.ruins[ruin]))
+                ruin_label.grid(row=1, column=ruin_startcol,padx=10)
+                ruin_startcol += 1
+            vsep4 = ttk.Separator(headline_frames[index],orient="vertical")
+            vsep4.grid(row=1,column=19,sticky="nsew")
+            index += 1
