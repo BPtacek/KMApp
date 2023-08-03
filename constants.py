@@ -37,7 +37,7 @@ leadership_status_bonuses = {1: 1, 8: 2,
 settlement_consumption_scaling = {1:1,2:2,4:5,6:10}  # {settlement size threshold : settlement consumption value}.
 attributes = ["loyalty","stability","culture","economy"]
 prof_dict = {0:"Untrained",1:"Trained",2:"Expert",3:"Master",4:"Legendary"}
-resources = ["lumber","stone","ore","luxuries"]
+resources_jobsites = {"lumber":"Logging Camps","stone":"Quarries","ore":"Mines","food":"Farms"}
 
 
 # Settlment size is defined in numbers of filled blocks; each block has 4 lots.

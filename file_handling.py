@@ -28,7 +28,9 @@ def read_json(kingdom):
     kingdom.set_work_camps(data["work_camps"])
     kingdom.set_capital(data["capital"])
     for i in data["claimed_hexes"]:
-        kingdom.add_hex((i[0],i[1]))          
+        kingdom.add_hex((i[0],i[1]))    
+    for i in data["explored_hexes"]:
+        kingdom.add_explored_hex((i[0],i[1]))
     for settlement in data["settlements"]:
         name = settlement["name"]
         location = (settlement["location"][0],settlement["location"][1])
@@ -37,6 +39,10 @@ def read_json(kingdom):
             target = [i for i in Buildings if building == i.name]
             buildings[target[0]] = number
         kingdom.add_settlement(name,location,buildings)
+    try:
+        for coordinates in data["roads"]:
+            kingdom.add_road(coordinates)
+    except: kingdom.roads = []
     f.close()
     
 def export_kingdom_as_file(kingdom, print_only=False):            

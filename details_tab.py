@@ -7,6 +7,7 @@ Created on Thu Jul 27 15:12:05 2023
 from constants import *
 import tkinter as tk
 from tkinter import ttk
+from constants import *
 
 def draw_attribute_overview(state):
     kingdom = state.kingdom
@@ -239,7 +240,11 @@ def draw_resource_table(state):
         current.grid(row=resource_startrow, column=1)
         capacity = tk.Label(resource_frame, text=str(kingdom.resources[resource][1]))
         capacity.grid(row=resource_startrow,column=2)
-        gain = tk.Label(resource_frame,text=str(kingdom.resources[resource][2]))
+        try:
+            site_type = resources_jobsites[resource]
+            gain = tk.Label(resource_frame,textvariable=state.site_numbers[site_type])
+        except: 
+            gain = tk.Label(resource_frame,text="0")            
         gain.grid(row=resource_startrow,column=3)
         resource_startrow += 1
         

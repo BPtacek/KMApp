@@ -11,10 +11,11 @@ from constants import *
 
 class Kingdom:
     def __init__(self, name="", claimed_hexes=[], level=1, unrest=0, ruins={i:0 for i in Ruins}, 
-                 settlements = [], attributes = {i:10 for i in Kingdom_skills.values()}, 
+                 settlements = [], attributes = {i:10 for i in Kingdom_skills.values()},relations={},
                  skills={i:0 for i in Kingdom_skills.keys()}, advisors={i:"filled" for i in Advisors.keys()}, 
-                 relations={},RP=[0,0,0],xp=0,work_camps={},capital="",
-                 resources={"food":[0,0,0],"lumber":[0,0,0],"ore":[0,0,0],"stone":[0,0,0],"luxuries":[0,0,0]}):
+                 RP=[0,0,0],xp=0,work_camps={"Farms":[],"Mines":[],"Quarries":[],"Logging Camps":[]},capital="",
+                 resources={"food":[0,0,0],"lumber":[0,0,0],"ore":[0,0,0],"stone":[0,0,0],"luxuries":[0,0,0]},
+                 explored_hexes=[],roads=[]):
         self.name = name  # String, Kingdom name
         self.claimed_hexes = claimed_hexes  # List of tuples (x,y) specifying coordinates of claimed hexes
         self.level = level  # Int, kingdom level
@@ -32,6 +33,8 @@ class Kingdom:
         self.xp = xp # Int, current XP
         self.work_camps = work_camps # Dict, {work camp object:[list of hex coordinates]}
         self.capital = capital # String, identity of Kingdom's capital
+        self.explored_hexes = explored_hexes # List of tuples (x,y) representing center coordinates of hexes containing roads
+        self.roads = roads # List of tuples (x,y) representing center coordinates of hexes containing roads
         
     def set_name(self,name):
         self.name = name
@@ -79,8 +82,13 @@ class Kingdom:
         self.relations = relations
     
     def add_settlement(self,name,location,buildings):
+        # name is a string, location is a tuple of Cartesian coordinates, buildings is a list of Building objects
         s = Settlement(name,location,buildings)
         self.settlements.append(s)
+        
+    def add_road(self,coordinates):
+        # Coordinates is a tuple (x,y)
+        self.roads.append(coordinates)
     
     def reset(self):
         self.claimed_hexes = []
@@ -92,10 +100,12 @@ class Kingdom:
         self.ruins = {i:0 for i in Ruins}
         self.xp = 0
         self.RP = [0,4,9]
-        self.work_camps = {"farms":0,"lumber camps":0,"mines":0,"quarries":0}        
+        self.work_camps = {"Farms":[],"Logging Camps":[],"Mines":[],"Quarries":[]}
         self.name = ""
         self.resources = {"food":[0,0,0],"lumber":[0,0,0],"stone":[0,0,0],"ore":[0,0,0],"luxuries":[0,0,0]}
         self.capital = None
+        self.explored_hexes = []
+        self.roads = []
         
 
     def update_control_DC(self):
@@ -185,6 +195,8 @@ class Kingdom:
         if coordinates not in self.claimed_hexes:
             self.claimed_hexes.append(coordinates)
             self.update_control_DC()
+            if coordinates in self.explored_hexes:
+                self.explored_hexes.remove(coordinates)
         else:
             print("You tried to add a hex that already belongs to the kingdom. That was pretty dumb.")
 
@@ -192,9 +204,26 @@ class Kingdom:
         if coordinates in self.claimed_hexes:
             self.claimed_hexes.remove(coordinates)
             self.update_control_DC()
+            self.add_explored_hex(coordinates)
         else:
             print("You tried to remove a hex that didn't belong to the kingdom to begin with.")
-
+    
+    def add_explored_hex(self,coordinates):
+        if coordinates not in self.claimed_hexes:
+            self.explored_hexes.append(coordinates)
+            
+    def remove_explored_hex(self,coordinates):
+        if coordinates in self.explored_hexes:
+            self.explored_hexes.remove(coordinates)
+        else: print("Tried to remove explored hex that was not on list of explored hexes")
+    
+    def add_work_site(self,coordinates,name):
+        if coordinates not in self.claimed_hexes:
+            print("Attempted to place work site in unclaimed hex!")
+        else:
+            if name not in self.work_camps.keys(): self.work_camps[name] = [coordinates]
+            else: self.work_camps[name].append(coordinates)
+    
     def get_size(self):
         # returns the control DC modifier for the kingdom based on its number of claimed hexes
         num_hexes = len(self.claimed_hexes)
@@ -360,7 +389,7 @@ class Building:
 class State:
     def __init__(self,kingdom,attribute_variables={},skill_modifiers={},proficiency_variables={},ruin_variables={},
                  hex_center_list = [],hex_angle=60,hexagon_side_length=30,tabs=[],headline_frames={},table_frames={},
-                 kname=None):
+                 kname=None,site_numbers={}):
         self.kingdom = kingdom
         self.attribute_variables = attribute_variables
         self.skill_modifiers = skill_modifiers
@@ -374,6 +403,7 @@ class State:
         self.headline_frames = headline_frames # dict of tk.Frame objects housing the headline stats at the top of each tab
         self.table_frames = table_frames # dict of tk.Frame objects housing gui tables
         self.kname = kname # StringVar representing kingdom name
+        self.site_numbers = site_numbers # Dict of StringVars representing numbers of farms, logging camps, etc.
         
     def update_stringvars(self):
         for (i,j) in self.attribute_variables.items():
@@ -385,6 +415,12 @@ class State:
         for (i,j) in self.proficiency_variables.items():
             proficiency = prof_dict[self.kingdom.get_skill(i)]
             j.set(proficiency)
+        for (i,j) in self.site_numbers.items():
+            try: 
+                number = len(self.kingdom.work_camps[i])
+            except: 
+                number = 0
+            j.set(number)
     
     def add_to_hex_center_list(self,coords):
         # coords is a tuple (x,y)
@@ -447,31 +483,32 @@ class State:
             food_capacity_label = tk.Label(headline_frames[index], text="Food Consumed/Turn: " + 
                                            str(kingdom.get_consumption()))
             food_capacity_label.grid(row=1, column=5, padx=10)
-            food_turn_label = tk.Label(headline_frames[index], text="Food Gained/Turn: " + 
-                                       str(kingdom.resources["food"][2]))
-            food_turn_label.grid(row=1, column=6, padx=10)
+            food_turn_label = tk.Label(headline_frames[index], text="Food Gained/Turn:")
+            food_turn_value = tk.Label(headline_frames[index],textvariable=self.site_numbers["Farms"])
+            food_turn_label.grid(row=1, column=6,sticky="e")
+            food_turn_value.grid(row=1,column=7,sticky="w")
             vsep2 = ttk.Separator(headline_frames[index],orient="vertical")
-            vsep2.grid(row=1,column=7,sticky="nsew")
+            vsep2.grid(row=1,column=8,sticky="nsew",padx=2)
             ##############################
             resource_dice_label = tk.Label(headline_frames[index], text = "Base Resource Dice: " + 
                                            kingdom.get_base_resource_die_string())
-            resource_dice_label.grid(row=1, column=8, padx=10)            
-            resource_col = 9
-            for resource in resources:
+            resource_dice_label.grid(row=1, column=9, padx=10)            
+            resource_col = 10
+            for resource in ["lumber","stone","ore","luxuries"]:
                 resource_label = tk.Label(headline_frames[index],
                                           text=resource.title() + ": " + str(kingdom.resources[resource][0]))
                 resource_label.grid(row=1,column=resource_col,padx=10)
                 resource_col += 1
             vsep3 = ttk.Separator(headline_frames[index],orient="vertical")
-            vsep3.grid(row=1,column=13,sticky="nsew")
+            vsep3.grid(row=1,column=14,sticky="nsew")
             ########################
             unrest_label = tk.Label(headline_frames[index], text="Unrest: " + str(kingdom.unrest))
-            unrest_label.grid(row=1, column=14, padx=10)            
-            ruin_startcol=15
+            unrest_label.grid(row=1, column=15, padx=10)            
+            ruin_startcol=16
             for ruin in Ruins:
                 ruin_label = tk.Label(headline_frames[index],text = ruin.title() + ": " + str(kingdom.ruins[ruin]))
                 ruin_label.grid(row=1, column=ruin_startcol,padx=10)
                 ruin_startcol += 1
             vsep4 = ttk.Separator(headline_frames[index],orient="vertical")
-            vsep4.grid(row=1,column=19,sticky="nsew")
+            vsep4.grid(row=1,column=20,sticky="nsew")
             index += 1

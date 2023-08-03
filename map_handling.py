@@ -59,9 +59,6 @@ def middle_click_remove_hex(x,y,state):
     # remove a claimed hex on middle-click and redraw the world map to remove red border around the lost hex
     adjusted_hex_coordinate = identify_hex(x, y, state)
     state.kingdom.remove_hex((adjusted_hex_coordinate[0], adjusted_hex_coordinate[1]))
-    state.map_canvas.delete("all")  # horrible hacky strategy: update map by deleting it and redrawing everything
-    state.map_canvas.create_image(0, 0, anchor="nw", image=state.worldmap)
-    draw_hex_grid(state)
     draw_kingdom_borders(state)
 
 def menu_add_settlement(x,y,state):
@@ -72,25 +69,92 @@ def menu_add_settlement(x,y,state):
     new_name=tk.StringVar(top,value="")
     entry = tk.Entry(top,width=25,textvariable=new_name)
     entry.grid(row=0,column=1)
-    def name_listener(event=None):
+    (center_x,center_y) = identify_hex(x,y,state)
+    def name_listener(event=None):        
         name = entry.get()        
-        kingdom.add_settlement(name,(x,y),{})        
+        kingdom.add_settlement(name,(center_x,center_y),{})        
         state.destroy_table_frame("settlements frame")
         state.destroy_table_frame("settlement buildings frame")
+        draw_kingdom_borders(state)
         draw_buildings_and_settlements_tables(state)
         top.destroy()
     entry.bind("<Return>",name_listener)    
+    
+def toggle_explored(x,y,state):
+    (x,y) = identify_hex(x,y,state)
+    if (x,y) in state.kingdom.explored_hexes:
+        state.kingdom.remove_explored_hex((x,y))
+        draw_kingdom_borders(state) 
+    else:        
+        state.kingdom.add_explored_hex((x,y))
+        draw_kingdom_borders(state)
+        
+def add_jobsite(x,y,state,name):
+    (x,y) = identify_hex(x,y,state)
+    if (x,y) in state.kingdom.claimed_hexes and (x,y) not in state.kingdom.work_camps[name]:
+        state.kingdom.add_work_site((x,y),name)
+        state.update_stringvars()
+        draw_kingdom_borders(state)
+        
+def add_road(x,y,state):
+    coordinates = identify_hex(x,y,state)
+    state.kingdom.add_road(coordinates)
+    draw_kingdom_borders(state)
 
-def right_click_menu(x,y,state):
+def draw_roads(state):
+    kingdom = state.kingdom
+    index = len(kingdom.roads)
+    length = state.hexagon_side_length
+    canvas = state.map_canvas
+    road_list = []
+    def get_distance(coordinates1,coordinates2):
+        return sqrt((coordinates1[0] - coordinates2[0])**2 + (coordinates1[1]-coordinates2[1])**2)
+    for i in range(index):
+        for j in kingdom.roads[i+1:]:
+            if j != []:               
+                if get_distance(kingdom.roads[i],j) <= 1 + length * sqrt(3):
+                    startpoint = (kingdom.roads[i][0], length + kingdom.roads[i][1])
+                    endpoint = (j[0],length+j[1])
+                    road_list.append((startpoint,endpoint))
+    for (start,end) in road_list:
+        canvas.create_line(start[0],start[1],end[0],end[1],fill="gray",width=4)
+        # print("Tried to add road between " + str(start) + " and " + str(end))
+        # print(roadlist)
+            
+def right_click_menu(x,y,x_root,y_root,state):
     m = tk.Menu(state.map_canvas,tearoff=0)
     (hex_x,hex_y) = (x,y)
     m.add_command(label="Add Settlement",command = lambda s=state,x=x,y=y:menu_add_settlement(x,y,s))
-    m.add_command(label="Add Farm")
-    m.add_command(label="Add Lumber Camp")
-    m.add_command(label="Add Mine")
-    m.add_command(label="Add Quarry")
-    m.add_command(label="Add Road")    
-    m.tk_popup(x,y)    
+    m.add_command(label="Add Farm",command=lambda s=state,x=x,y=y:add_jobsite(x,y,s,"Farms"))
+    m.add_command(label="Add Lumber Camp",command=lambda s=state,x=x,y=y:add_jobsite(x,y,s,"Logging Camps"))
+    m.add_command(label="Add Mine",command=lambda s=state,x=x,y=y:add_jobsite(x,y,s,"Mines"))
+    m.add_command(label="Add Quarry",command=lambda s=state,x=x,y=y:add_jobsite(x,y,s,"Quarries"))
+    m.add_command(label="Add Road",command=lambda s=state,x=x,y=y:add_road(x,y,s))
+    m.add_command(label="Toggle Explored State",command = lambda s=state,x=x,y=y:toggle_explored(x,y,s))  
+    m.tk_popup(x_root,y_root)       
+
+def place_map_icons(state):
+    kingdom = state.kingdom
+    canvas = state.map_canvas
+    length = state.hexagon_side_length
+    wheat = Image.open("bigwheat.png")  
+    farm_icon = ImageTk.PhotoImage(wheat)    
+    for settlement in kingdom.settlements:
+        (x,y) = (settlement.location[0],settlement.location[1]+length)
+        canvas.create_oval(x-10,y-10,x+10,y+10,fill="blue")
+    for mine in kingdom.work_camps["Mines"]:
+        (x,y) = (mine[0],mine[1]+length)
+        canvas.create_oval(x-8,y-8,x+8,y+8,fill="red")
+    for logging_camp in kingdom.work_camps["Logging Camps"]:
+        (x,y) = (logging_camp[0],logging_camp[1]+length)
+        canvas.create_oval(x-8,y-8,x+8,y+8,fill="yellow")
+    for quarry in kingdom.work_camps["Quarries"]:
+            (x,y) = (quarry[0],quarry[1]+length)
+            canvas.create_oval(x-8,y-8,x+8,y+8,fill="black")
+    for farm in kingdom.work_camps["Farms"]:
+        (x,y) = (farm[0],farm[1]+length)
+        canvas.create_oval(x-8,y-8,x+8,y+8,fill="green")
+        # canvas.create_image(x,y,anchor="nw",image=farm_icon)
 
 def draw_kingdom_borders(state):
     # draw a thick red line over the hex grid around the kingdom's external borders
@@ -101,25 +165,29 @@ def draw_kingdom_borders(state):
     canvas.delete("all")
     canvas.create_image(0, 0, anchor="nw", image=state.worldmap)    
     draw_hex_grid(state)
-    linepoints1 = []
+    draw_roads(state)
     def truncate(a): # a is a float; discard everything after first 5 decimal places
         return float(f'{a:.5f}')
-    for (x, y) in kingdom.claimed_hexes:
-        start_x = x
-        start_y = y            
-        for i in range(6):
-            end_x = start_x + length * cos(radians(30 + angle * i))
-            end_y = start_y + length * sin(radians(30 + angle * i))
-            x1 = truncate(start_x)
-            x2 = truncate(end_x)
-            y1 = truncate(start_y)
-            y2 = truncate(end_y)                
-            linepoints1.append(((x1,y1),(x2,y2)))
-            start_x = end_x
-            start_y = end_y       
-    linepoints2 = []
-    for ((x1,y1),(x2,y2)) in linepoints1:
-        if ((x2,y2),(x1,y1)) not in linepoints1:
-            linepoints2.append(((x1,y1),(x2,y2)))                    
-    for ((x1,y1),(x2,y2)) in linepoints2:
-            canvas.create_line(x1,y1,x2,y2,fill="red",width=3)                
+    def set_border_coordinates(coordinate_list,exclusion_list=[]):
+        lp = []
+        for (x, y) in coordinate_list:
+            start_x = x
+            start_y = y            
+            for i in range(6):
+                end_x = start_x + length * cos(radians(30 + angle * i))
+                end_y = start_y + length * sin(radians(30 + angle * i))
+                x1 = truncate(start_x)
+                x2 = truncate(end_x)
+                y1 = truncate(start_y)
+                y2 = truncate(end_y)
+                lp.append(((x1,y1),(x2,y2)))
+                start_x = end_x
+                start_y = end_y
+        return [(start,end) for (start,end) in lp if ((end,start) not in lp) and ((start,end) not in exclusion_list)]
+    claimed_border = set_border_coordinates(kingdom.claimed_hexes)
+    explored_border = set_border_coordinates(kingdom.explored_hexes,claimed_border)
+    for (start,end) in claimed_border:
+            canvas.create_line(start[0],start[1],end[0],end[1],fill="red",width=3)
+    for (start,end) in explored_border:
+            canvas.create_line(start[0],start[1],end[0],end[1],fill="red",width=3,dash=(5,2))    
+    place_map_icons(state)
