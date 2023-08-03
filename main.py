@@ -17,8 +17,6 @@ from map_handling import *
 from details_tab import *
 from settlements_tab import *
 
-image1 = Image.open("GridlessMap75.jpeg")
-
 w1 = tk.Tk()
 w1.title("Kingdom Management!")
 
@@ -28,9 +26,11 @@ attribute_variables = {i:tk.IntVar(w1,value=kingdom.get_attribute(i)) for i in a
 skill_modifiers = {i:tk.IntVar(w1,value=kingdom.get_modifier(i)) for i in Kingdom_skills.keys()}
 proficiency_variables = {i:tk.StringVar(w1) for i in Kingdom_skills.keys()}
 ruin_variables = {i:tk.StringVar(w1,value=kingdom.ruins[i]) for i in Ruins}
+site_numbers = {i:tk.StringVar(w1,value="0") for i in resources_jobsites.values()}
 
 app_state = State(kingdom=kingdom,attribute_variables=attribute_variables,skill_modifiers=skill_modifiers,
-                  proficiency_variables=proficiency_variables,ruin_variables=ruin_variables)
+                  proficiency_variables=proficiency_variables,ruin_variables=ruin_variables,
+                  site_numbers=site_numbers)
 
 def draw_tables(state):
     state.clear_all_tabs()
@@ -136,8 +136,8 @@ def create_canvas(state):
         state.write_headline_stats()
         
     def rclick(event=None,state=state):
-        (x,y) = (event.x_root,event.y_root)
-        right_click_menu(x,y,state)
+        (x,y,x_root,y_root) = (event.x,event.y,event.x_root,event.y_root)
+        right_click_menu(x,y,x_root,y_root,state)
     
     state.map_canvas.bind("<Button-1>", lclick)
     state.map_canvas.bind("<Button-2>", mclick)
