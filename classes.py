@@ -8,9 +8,8 @@ import tkinter as tk
 from tkinter import ttk
 from constants import *
 
-
 class Kingdom:
-    def __init__(self, name="", claimed_hexes=[], level=1, unrest=0, ruins={i:0 for i in Ruins}, 
+    def __init__(self, name="", claimed_hexes=[], level=1, unrest=0, ruins={i:[0,0] for i in Ruins}, 
                  settlements = [], attributes = {i:10 for i in Kingdom_skills.values()},relations={},
                  skills={i:0 for i in Kingdom_skills.keys()}, advisors={i:"filled" for i in Advisors.keys()}, 
                  RP=[0,0,0],xp=0,work_camps={"Farms":[],"Mines":[],"Quarries":[],"Logging Camps":[]},capital="",
@@ -21,7 +20,7 @@ class Kingdom:
         self.level = level  # Int, kingdom level
         self.unrest = unrest  # Int, kingdom's level of unrest
         self.settlements = settlements  # List of Settlement objects representing kingdom's settlements
-        self.ruins = ruins  # Dictionary, names and values of kingdom's ruins
+        self.ruins = ruins  # {name: [current value, current threshold]}, names and values + thresholds of kingdom's ruins
         self.attributes = attributes  # Dictionary, names and values of kingdom's attributes
         self.skills = skills  # Dictionary, {skill name (str): kingdom proficiency value (int, 0 to 4)}
         self.relations = relations  # Dictionary, names and status of diplomatic relations with neighbouring entities
@@ -97,16 +96,15 @@ class Kingdom:
         self.update_control_DC()
         self.skills = {i:0 for i in Kingdom_skills.keys()}
         self.attributes = {i:10 for i in Kingdom_skills.values()}
-        self.ruins = {i:0 for i in Ruins}
+        self.ruins = {i:[0,0] for i in Ruins}
         self.xp = 0
         self.RP = [0,4,9]
         self.work_camps = {"Farms":[],"Logging Camps":[],"Mines":[],"Quarries":[]}
-        self.name = ""
+        self.name = "Unnamed Kingdom"
         self.resources = {"food":[0,0,0],"lumber":[0,0,0],"stone":[0,0,0],"ore":[0,0,0],"luxuries":[0,0,0]}
         self.capital = None
         self.explored_hexes = []
-        self.roads = []
-        
+        self.roads = []        
 
     def update_control_DC(self):
         self.control_DC = control_DC_table[self.level] + self.get_size()
@@ -175,12 +173,19 @@ class Kingdom:
         else:
             print("The input attribute was not in the attribute list, you should fix that.")
 
-    def change_ruin(self, ruin, change):
+    def change_ruin(self, ruin, new_value):
         if ruin.lower() in self.ruins:
-            if self.ruins[ruin.lower()] + change < 0:
-                self.ruins[ruin.lower()] = 0
+            if new_value < 0:
+                self.ruins[ruin.lower()][0] = 0
             else:
-                self.ruins[ruin.lower()] += change
+                self.ruins[ruin.lower()][0] = new_value
+
+    def change_ruin_threshold(self, ruin, change):
+        if ruin.lower() in self.ruins:
+            if self.ruins[ruin.lower()][1] + change < 0:
+                self.ruins[ruin.lower()][1] = 0
+            else:
+                self.ruins[ruin.lower()][1] += change
 
     def change_unrest(self, change):
         try: change = int(change)
@@ -232,33 +237,43 @@ class Kingdom:
         elif [j["dc modifier"] for (i, j) in size_thresholds.items() if i < num_hexes] == []: return 0
         else: return max([j["dc modifier"] for (i, j) in size_thresholds.items() if i < num_hexes])
 
-    def get_modifier(self, skill):
+    def get_skill_modifier(self, skill):
         # String -> Int, get the modifier (attribute + proficiency + building item + ruler circumstance) for the named skill
-        skill_attribute = Kingdom_skills[skill]  # find the attribute corresponding to the named skill
+        skill_attribute = Kingdom_skills[skill.lower()]  # find the attribute corresponding to the named skill
         leadership_bonus = max(
             {leadership_status_bonuses[i] for i in leadership_status_bonuses.keys() if i <= self.level})
         relevant_advisors = {i: j for (i, j) in Advisors.items() if Advisors[i] == skill_attribute}
         relevant_role_filled = True in [self.advisors[i] == "filled" for i in relevant_advisors.keys()]
         level_multiplier = self.level * (self.get_skill(skill) != 0)  # Int * Bool
         proficiency_bonus = 2 * self.get_skill(skill)
-        attribute_bonus = (self.get_attribute(Kingdom_skills[skill]) - 10) // 2
-        leadership_bonus = leadership_bonus * relevant_role_filled  # Int * Bool
+        attribute_bonus = (self.get_attribute(Kingdom_skills[skill.lower()]) - 10) // 2
+        leadership_bonus = leadership_bonus * relevant_role_filled  # Int * Bool        
         return level_multiplier + proficiency_bonus + attribute_bonus + leadership_bonus - self.get_unrest_penalty()
+    
+    def get_activity_modifier(self,activity):
+        skill_modifier = 0
+        for i in activities:
+            if i.name == activity:
+                for skill in i.skills:
+                    if self.get_skill_modifier(skill) > skill_modifier:
+                        skill_modifier = self.get_skill_modifier(skill)
+        building_modifier = self.building_modifiers()[activity]
+        return skill_modifier + building_modifier
 
     def skill_check(self, skill):
         # string -> Int, roll a check against the named skill
-        return d20() + self.get_modifier(skill)
+        return d20() + self.get_skill_modifier(skill)
 
     def building_modifiers(self):
         # generate a dictionary of all the bonuses to Kingdom activities provided by every building in every settlement
-        out = {}
+        out = {i:0 for i in activity_names}
         for settlement in self.settlements:
-            for bonus in settlement.kingdom_bonuses():
-                if bonus in out.keys() and settlement.kingdom_bonuses()[bonus] > out[bonus]:
-                    out[bonus] = settlement.kingdom_bonuses()[bonus]
-                elif bonus not in out.keys():
-                    out[bonus] = settlement.kingdom_bonuses()[bonus]
-            return out
+            for (activity,bonus) in settlement.kingdom_bonuses().items():
+                if activity in out.keys() and settlement.kingdom_bonuses()[activity] > out[activity]:
+                    out[activity] = settlement.kingdom_bonuses()[activity]
+                elif activity not in out.keys():
+                    out[activity] = settlement.kingdom_bonuses()[activity]
+        return out
 
     def get_consumption(self):
         # generate the total food consumption of every settlement in the kingdom
@@ -323,13 +338,13 @@ class Settlement:
 
     def kingdom_bonuses(self):
         # generate a dictionary containing a list of all the Kingdom activity bonuses provided by the settlement's buildings
-        out = {}
+        out = {i:0 for i in activity_names}
         for building in self.buildings:
-            for bonus in building.kingdom_item:
-                if bonus in out.keys() and building.kingdom_item[bonus] > out[bonus]:
-                    out[bonus] = building.kingdom_item[bonus]
+            for (activity,bonus) in building.kingdom_item.items():
+                if activity in out.keys() and building.kingdom_item[activity] > out[activity]:
+                    out[activity] = building.kingdom_item[activity]
                 elif bonus not in out.keys():
-                    out[bonus] = building.kingdom_item[bonus]
+                    out[activity] = building.kingdom_item[activity]
         return out
 
     def readable_buildings(self):
@@ -354,11 +369,13 @@ class Settlement:
         return self.occupied_blocks
 
 class Building:
-    def __init__(self, name, lots, level, cost, difficulty, unrest, ruins, consumption, residential,
-                 kingdom_item, PC_item):
+    def __init__(self, name="", lots=0, level=0, cost=[0,0,0,0,0], difficulty=["",0,0], unrest=0, ruins=[0,0,0,0,0], 
+                 consumption=False,residential=False,kingdom_item={}, PC_item={}, description="",effects="",
+                 upgrade_from="",upgrade_to="",base_item=0,magic_item=0,primal_item=0,divine_item=0,
+                 luxury_item=0,item_bonus_text="",ruins_text=""):
         # cost is a list [Int, Int, Int, Int, Int] - RP, Lumber, Stone, Ore, Luxuries
-        # difficulty is a list [String, Int, Int] - Skill needed to build, required proficiency (0 = untrained, 3 = master), DC
-        # unrest is an integer that may include the value of a dice roll
+        # difficulty is a list [List, Int, Int] - Skills needed to build, required proficiency, DC
+        # unrest is a string specifying the change in unrest upon construction 
         # ruins is a list [Int, Int, Int, Int, Int] - Change in any Ruin or in Corruption, Crime, Decay, Strife
         # consumption is Boolean; True means building reduces consumption
         # residential is Boolean; True means building is residential
@@ -372,8 +389,8 @@ class Building:
         self.stone = cost[2]  # Int, stone cost of building
         self.ore = cost[3]  # Int, ore cost of building
         self.luxuries = cost[4]  # Int, luxuries cost of building
-        self.skill = difficulty[0]  # String, skill needed to construct
-        self.proficiency = difficulty[1]
+        self.skill = difficulty[0]  # List of strings corresponding to skills that can be used to construct
+        self.proficiency = difficulty[1]  # Int (0-3) representing proficiency (untrained - master) needed to build
         self.DC = difficulty[2]  # Int, DC to build
         self.unrest = unrest  # Int, Change in Unrest upon completion
         self.ruin = ruins[0]  # Int, change in any ruin upon completion
@@ -385,10 +402,14 @@ class Building:
         self.residential = residential
         self.kingdom_item = kingdom_item  # Item bonuses to Kingdom skill checks conferred by building
         self.PC_item = PC_item  # Item bonuses to PC skill checks conferred by building
+        self.description = description
+        self.effects = effects
+        self.item_bonus_text = item_bonus_text
+        self.ruins_text = ruins_text
 
 class State:
     def __init__(self,kingdom,attribute_variables={},skill_modifiers={},proficiency_variables={},ruin_variables={},
-                 hex_center_list = [],hex_angle=60,hexagon_side_length=30,tabs=[],headline_frames={},table_frames={},
+                 hex_center_list = [],hex_angle=60,hexagon_side_length=30,tabs={},headline_frames={},table_frames={},
                  kname=None,site_numbers={}):
         self.kingdom = kingdom
         self.attribute_variables = attribute_variables
@@ -404,14 +425,15 @@ class State:
         self.table_frames = table_frames # dict of tk.Frame objects housing gui tables
         self.kname = kname # StringVar representing kingdom name
         self.site_numbers = site_numbers # Dict of StringVars representing numbers of farms, logging camps, etc.
+        self.main_header="placeholder"
         
     def update_stringvars(self):
         for (i,j) in self.attribute_variables.items():
             j.set(self.kingdom.get_attribute(i))        
         for (i,j) in self.skill_modifiers.items():
-            j.set(self.kingdom.get_modifier(i))
+            j.set(self.kingdom.get_skill_modifier(i))
         for (i,j) in self.ruin_variables.items():
-            j.set(self.kingdom.ruins[i])
+            j.set(self.kingdom.ruins[i][0])
         for (i,j) in self.proficiency_variables.items():
             proficiency = prof_dict[self.kingdom.get_skill(i)]
             j.set(proficiency)
@@ -451,8 +473,9 @@ class State:
         self.table_frames[name] = frame
     
     def clear_all_tabs(self):
-        for tab in self.tabs[1:]:
-            self.delete_frame_contents(tab)
+        for (name,tab) in self.tabs.items():
+            if name != "overview":
+                self.delete_frame_contents(tab)
             
     def destroy_table_frame(self, frame):
         if frame in self.table_frames.keys():
@@ -465,9 +488,8 @@ class State:
     def write_headline_stats(self):
         kingdom = self.kingdom
         tabs = self.tabs
-        headline_frames = self.headline_frames
-        index = 0
-        for tab in tabs:
+        headline_frames = self.headline_frames        
+        for (index,tab) in tabs.items():
             self.delete_frame_contents(headline_frames[index])
             level_label = tk.Label(headline_frames[index], text="Level: " + str(kingdom.level)) 
             level_label.grid(row=1, column=0)
@@ -506,9 +528,9 @@ class State:
             unrest_label.grid(row=1, column=15, padx=10)            
             ruin_startcol=16
             for ruin in Ruins:
-                ruin_label = tk.Label(headline_frames[index],text = ruin.title() + ": " + str(kingdom.ruins[ruin]))
+                ruin_label = tk.Label(headline_frames[index],text = ruin.title() + ": " + str(kingdom.ruins[ruin][0]))
                 ruin_label.grid(row=1, column=ruin_startcol,padx=10)
                 ruin_startcol += 1
             vsep4 = ttk.Separator(headline_frames[index],orient="vertical")
             vsep4.grid(row=1,column=20,sticky="nsew")
-            index += 1
+            

@@ -6,13 +6,13 @@ Created on Wed Jul 26 11:57:40 2023
 """
 import tkinter as tk
 from tkinter import ttk
-from PIL import ImageTk, Image
 from math import cos, sin, sqrt, radians
+from PIL import ImageTk, Image
 from settlements_tab import *
 
 # the above defines key hex grid parameters and creates the world map canvas
 def draw_hexagon(state,x=0, y=0, color="black", linewidth=0):
-    # draws a single hexagon
+    """draws a single hexagon"""
     length = state.hexagon_side_length
     angle = state.hex_angle
     start_x = x
@@ -25,7 +25,7 @@ def draw_hexagon(state,x=0, y=0, color="black", linewidth=0):
         start_y = end_y
 
 def draw_hex_grid(state):
-    # draws a grid of hexagons over the world map. hexagons are drawn starting from the "top" vertex.     
+    """"draws a grid of hexagons over the world map. hexagons are drawn starting from the 'top' vertex."""     
     length = state.hexagon_side_length  # renaming for brevity
     grid_vertical_offset = -1.4 * length  # parameter to adjust grid position so it matches in-game map
     for c in range(30):
@@ -39,7 +39,7 @@ def draw_hex_grid(state):
             state.add_to_hex_center_list(h)
 
 def identify_hex(mouse_x, mouse_y, state):
-    # returns the pixel coordinates of the top vertex of the grid hex where the mouse was clicked
+    """returns the pixel coordinates of the top vertex of the grid hex where the mouse was clicked"""
     nearest_hex_center = (0, 0)
     nearest_hex_distance = 5000
     for (hex_x, hex_y) in state.hex_center_list:
@@ -50,18 +50,19 @@ def identify_hex(mouse_x, mouse_y, state):
     return (nearest_hex_center[0], nearest_hex_center[1] - state.hexagon_side_length)
 
 def left_click_add_hex(x,y,state):
-    # add a hex to kingdom.claimed_hexes on right click and draw a red border around the newly claimed hex
+    """add a hex to kingdom.claimed_hexes on right click and draw a red border around the newly claimed hex"""
     adjusted_hex_coordinate = identify_hex(x,y,state)
     state.kingdom.add_hex((adjusted_hex_coordinate[0], adjusted_hex_coordinate[1]))
     draw_kingdom_borders(state)
 
 def middle_click_remove_hex(x,y,state):
-    # remove a claimed hex on middle-click and redraw the world map to remove red border around the lost hex
+    """remove a claimed hex on middle-click and redraw the world map to remove red border around the lost hex"""
     adjusted_hex_coordinate = identify_hex(x, y, state)
     state.kingdom.remove_hex((adjusted_hex_coordinate[0], adjusted_hex_coordinate[1]))
     draw_kingdom_borders(state)
 
 def menu_add_settlement(x,y,state):
+    """Context menu function to add a new settlement to the kingdom"""
     kingdom = state.kingdom
     top = tk.Toplevel(state.map_canvas)
     label = tk.Label(top,text="New Settlement Name:")
@@ -81,6 +82,7 @@ def menu_add_settlement(x,y,state):
     entry.bind("<Return>",name_listener)    
     
 def toggle_explored(x,y,state):
+    """Context menu function to toggle a hex between explored and unexplored states"""
     (x,y) = identify_hex(x,y,state)
     if (x,y) in state.kingdom.explored_hexes:
         state.kingdom.remove_explored_hex((x,y))
@@ -90,6 +92,7 @@ def toggle_explored(x,y,state):
         draw_kingdom_borders(state)
         
 def add_jobsite(x,y,state,name):
+    """Context menu function to add a logging camp/farm/quarry/mine to the chosen hex"""
     (x,y) = identify_hex(x,y,state)
     if (x,y) in state.kingdom.claimed_hexes and (x,y) not in state.kingdom.work_camps[name]:
         state.kingdom.add_work_site((x,y),name)
@@ -97,11 +100,13 @@ def add_jobsite(x,y,state,name):
         draw_kingdom_borders(state)
         
 def add_road(x,y,state):
+    """Context menu function to add a road to the chosen hex"""
     coordinates = identify_hex(x,y,state)
     state.kingdom.add_road(coordinates)
     draw_kingdom_borders(state)
 
 def draw_roads(state):
+    """Context menu function to draw the kingdom's road network"""
     kingdom = state.kingdom
     index = len(kingdom.roads)
     length = state.hexagon_side_length
@@ -122,6 +127,7 @@ def draw_roads(state):
         # print(roadlist)
             
 def right_click_menu(x,y,x_root,y_root,state):
+    """Creates the right-click context menu for the map tab"""
     m = tk.Menu(state.map_canvas,tearoff=0)
     (hex_x,hex_y) = (x,y)
     m.add_command(label="Add Settlement",command = lambda s=state,x=x,y=y:menu_add_settlement(x,y,s))
@@ -134,11 +140,12 @@ def right_click_menu(x,y,x_root,y_root,state):
     m.tk_popup(x_root,y_root)       
 
 def place_map_icons(state):
+    """Draws icons or shapes on the map to represent settlements, work camps, and roads"""
     kingdom = state.kingdom
     canvas = state.map_canvas
     length = state.hexagon_side_length
-    wheat = Image.open("bigwheat.png")  
-    farm_icon = ImageTk.PhotoImage(wheat)    
+    wheat = Image.open("Images/bigwheat.png")  
+    # farm_icon = ImageTk.PhotoImage(wheat)    
     for settlement in kingdom.settlements:
         (x,y) = (settlement.location[0],settlement.location[1]+length)
         canvas.create_oval(x-10,y-10,x+10,y+10,fill="blue")
@@ -149,15 +156,16 @@ def place_map_icons(state):
         (x,y) = (logging_camp[0],logging_camp[1]+length)
         canvas.create_oval(x-8,y-8,x+8,y+8,fill="yellow")
     for quarry in kingdom.work_camps["Quarries"]:
-            (x,y) = (quarry[0],quarry[1]+length)
-            canvas.create_oval(x-8,y-8,x+8,y+8,fill="black")
+        (x,y) = (quarry[0],quarry[1]+length)
+        canvas.create_oval(x-8,y-8,x+8,y+8,fill="black")
     for farm in kingdom.work_camps["Farms"]:
         (x,y) = (farm[0],farm[1]+length)
         canvas.create_oval(x-8,y-8,x+8,y+8,fill="green")
         # canvas.create_image(x,y,anchor="nw",image=farm_icon)
 
 def draw_kingdom_borders(state):
-    # draw a thick red line over the hex grid around the kingdom's external borders
+    """draw a thick red line over the hex grid around the kingdom's external borders and a dashed red line
+    around the explored hexes, and then places settlements, roads, and work camps"""
     kingdom = state.kingdom
     length = state.hexagon_side_length
     angle = state.hex_angle
@@ -187,7 +195,7 @@ def draw_kingdom_borders(state):
     claimed_border = set_border_coordinates(kingdom.claimed_hexes)
     explored_border = set_border_coordinates(kingdom.explored_hexes,claimed_border)
     for (start,end) in claimed_border:
-            canvas.create_line(start[0],start[1],end[0],end[1],fill="red",width=3)
+        canvas.create_line(start[0],start[1],end[0],end[1],fill="red",width=3)
     for (start,end) in explored_border:
-            canvas.create_line(start[0],start[1],end[0],end[1],fill="red",width=3,dash=(5,2))    
+        canvas.create_line(start[0],start[1],end[0],end[1],fill="red",width=3,dash=(5,2))    
     place_map_icons(state)

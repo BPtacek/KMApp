@@ -8,10 +8,11 @@ import tkinter
 from tkinter import filedialog as fd
 import json
 from constants import *
-from buildings import *
+# from buildings import *
+from nethysparse import *
 
 def read_json(kingdom):
-    f = fd.askopenfile()
+    f = fd.askopenfile(filetypes=[("json files","*.json")])
     data = json.load(f)
     kingdom.reset()
     kingdom.set_name(data["name"])
