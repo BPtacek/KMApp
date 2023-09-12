@@ -77,3 +77,9 @@ def d4():
     return random.randint(1, 4)
 #### End of utility functions
 #################
+
+activity_names = ['capital investment','clandestine business','craft luxuries','create a masterpiece',
+                  'creative solution','decadent feasts','deliberate planning','establish trade agreement',
+                  'evangelize the end','false victory','focused attention','harvest crops','hire adventurers',
+                  'celebrate holiday','infiltration','process hidden fees','preventative measures','pledge of fealty',
+                  'quell unrest','rest and relax']
